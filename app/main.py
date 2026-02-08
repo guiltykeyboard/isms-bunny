@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 
 from app.config import get_settings
-from app.routes import auth, memberships, setup, tenants, trust, users
+from app.routes import auth, memberships, setup, tenants, trust, users, webauthn
 from app.tenancy import resolve_tenant
 
 settings = get_settings()
@@ -26,3 +26,4 @@ app.include_router(tenants.router)
 app.include_router(auth.router)
 app.include_router(memberships.router)
 app.include_router(setup.router)
+app.include_router(webauthn.router)
