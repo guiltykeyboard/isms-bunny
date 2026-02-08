@@ -19,7 +19,7 @@ jobs:
           npx --yes cloc --json . > /tmp/loc.json
           LINES=$(jq '.SUM.code' /tmp/loc.json)
           echo "LOC=$LINES" >> $GITHUB_ENV
-          npx --yes badge-maker "label=lines of code&message=${LINES}&color=4B2C82" > assets/loc.svg
+          npx --yes badge-maker "lines_of_code" "${LINES}" "4B2C82" > assets/loc.svg
       - name: Commit badge update
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
