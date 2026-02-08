@@ -1,5 +1,4 @@
 .DS_Store
-local-context/
 
 # Local scratch context for Codex assistance (never committed)
 context/
