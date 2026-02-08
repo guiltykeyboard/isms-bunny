@@ -45,6 +45,7 @@ Dev defaults
 
 Dev quality checks
 - Ruff lint: `pip install -r requirements-dev.txt` then `ruff check .`
+- CI lint workflow auto-creates/updates an issue (label `ci:lint`) on failures and auto-closes when passing.
 
 ## Structure
 - `design/` — requirements, architecture, trust page notes, theme.

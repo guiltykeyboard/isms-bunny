@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 
 from app.config import get_settings
 from app.tenancy import resolve_tenant
-from app.routes import users, trust
+from app.routes import users, trust, tenants
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version="0.1.0")
@@ -22,3 +22,4 @@ async def health():
 
 app.include_router(users.router)
 app.include_router(trust.router)
+app.include_router(tenants.router)
