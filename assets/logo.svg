@@ -1,28 +1,40 @@
 <svg width="220" height="240" viewBox="0 0 220 240" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#4B2C82"/>
-      <stop offset="100%" stop-color="#6F3CCF"/>
+    <linearGradient id="fur" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5C36A6"/>
+      <stop offset="100%" stop-color="#4B2C82"/>
+    </linearGradient>
+    <linearGradient id="band" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#6F3CCF"/>
+      <stop offset="100%" stop-color="#8B63F1"/>
     </linearGradient>
   </defs>
+
   <rect width="220" height="240" rx="28" fill="#0F1116"/>
-  <circle cx="110" cy="125" r="78" fill="#1A1D24" stroke="#4B2C82" stroke-width="6"/>
+
   <!-- ears -->
-  <path d="M72 76 C66 38 82 22 96 24 C108 26 108 50 100 78 Z" fill="#1A1D24" stroke="#4B2C82" stroke-width="6"/>
-  <path d="M148 76 C154 38 138 22 124 24 C112 26 112 50 120 78 Z" fill="#1A1D24" stroke="#4B2C82" stroke-width="6"/>
-  <!-- band -->
-  <rect x="46" y="96" width="128" height="34" rx="10" fill="#6F3CCF"/>
-  <path d="M174 100 L196 108 L174 116 Z" fill="#6F3CCF"/>
+  <path d="M82 38 C78 16 96 8 108 12 C116 14 118 28 116 42 L110 80 L90 80 Z" fill="url(#fur)" stroke="#2E1A52" stroke-width="4"/>
+  <path d="M138 38 C142 16 124 8 112 12 C104 14 102 28 104 42 L110 80 L130 80 Z" fill="url(#fur)" stroke="#2E1A52" stroke-width="4"/>
+
+  <!-- head -->
+  <circle cx="110" cy="125" r="72" fill="url(#fur)" stroke="#2E1A52" stroke-width="5"/>
+
+  <!-- headband -->
+  <rect x="42" y="96" width="136" height="32" rx="10" fill="url(#band)"/>
+  <path d="M178 110 L198 118 L178 126 Z" fill="url(#band)"/>
+
   <!-- eyes -->
-  <circle cx="92" cy="113" r="7" fill="#0F1116" stroke="#F4F5FB" stroke-width="3"/>
-  <circle cx="128" cy="113" r="7" fill="#0F1116" stroke="#F4F5FB" stroke-width="3"/>
-  <!-- mask glint -->
-  <rect x="46" y="96" width="128" height="10" rx="5" fill="#7F53D9" opacity="0.6"/>
-  <!-- nose -->
-  <path d="M110 134 L104 142 L116 142 Z" fill="#F4F5FB"/>
-  <!-- body wrap -->
-  <path d="M60 150 Q110 178 160 150 L154 188 Q110 210 66 188 Z" fill="url(#bg)" opacity="0.8"/>
-  <!-- feet -->
-  <ellipse cx="88" cy="198" rx="18" ry="10" fill="#1A1D24" stroke="#4B2C82" stroke-width="4"/>
-  <ellipse cx="132" cy="198" rx="18" ry="10" fill="#1A1D24" stroke="#4B2C82" stroke-width="4"/>
+  <circle cx="92" cy="116" r="10" fill="#0F1116" stroke="#F4F5FB" stroke-width="4"/>
+  <circle cx="128" cy="116" r="10" fill="#0F1116" stroke="#F4F5FB" stroke-width="4"/>
+
+  <!-- nose/mouth -->
+  <path d="M110 135 L104 143 L116 143 Z" fill="#F4F5FB"/>
+  <path d="M104 145 Q110 150 116 145" stroke="#F4F5FB" stroke-width="3" fill="none"/>
+
+  <!-- scarf -->
+  <path d="M68 152 Q110 178 152 152 L148 186 Q110 206 72 186 Z" fill="#0F1116" stroke="#4B2C82" stroke-width="4"/>
+
+  <!-- cheeks -->
+  <circle cx="82" cy="132" r="8" fill="#6F3CCF" opacity="0.6"/>
+  <circle cx="138" cy="132" r="8" fill="#6F3CCF" opacity="0.6"/>
 </svg>
