@@ -7,6 +7,7 @@ from app.config import get_settings
 from app.context import set_public, set_tenant
 from app.db import SessionLocal
 from app.models import Tenant
+from app.settings_store import get_setting
 
 
 async def resolve_tenant(request: Request):
@@ -33,9 +34,13 @@ async def resolve_tenant(request: Request):
         "localhost",
         "127.0.0.1",
     }:
-        if settings.default_tenant_id:
+        # try system_settings overrides first
+        async with SessionLocal() as session:
+            default_tid = await get_setting(session, "default_tenant_id")
+        candidate = default_tid or settings.default_tenant_id
+        if candidate:
             try:
-                tenant_id = UUID(settings.default_tenant_id)
+                tenant_id = UUID(str(candidate))
             except ValueError:
                 tenant_id = None
     if tenant_id is None:
