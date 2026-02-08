@@ -13,7 +13,7 @@
   <img alt="Docker Compose" src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white">
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-000000">
   <img alt="Lint" src="https://github.com/guiltykeyboard/isms-bunny/actions/workflows/lint.yml/badge.svg">
-  <img alt="Lines of code" src="assets/loc.svg">
+  <img alt="Lines of code" src="https://raw.githubusercontent.com/guiltykeyboard/isms-bunny/main/assets/loc.svg">
 </p>
 
 Open-source, MSP-friendly ISMS and trust center scaffold. Goals:
