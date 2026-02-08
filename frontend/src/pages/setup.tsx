@@ -18,6 +18,8 @@ export default function Setup() {
   const [password, setPassword] = useState("");
   const [storage, setStorage] = useState(defaultStorage);
   const [status, setStatus] = useState<string | null>(null);
+  const [oidcConfig, setOidcConfig] = useState("[]");
+  const [samlConfig, setSamlConfig] = useState("[]");
   const [mode, setMode] = useState<ThemeMode>(getInitialMode());
   const resolved = resolveMode(mode);
   const colors = palette[resolved];
@@ -26,6 +28,9 @@ export default function Setup() {
     e.preventDefault();
     setStatus("Initializing…");
     try {
+      const oidc = safeJson(oidcConfig);
+      const saml = safeJson(samlConfig);
+
       await apiFetch("/setup/initialize", {
         method: "POST",
         body: JSON.stringify({
@@ -37,6 +42,14 @@ export default function Setup() {
           storage,
         }),
       });
+
+      if (Array.isArray(oidc) && oidc.length) {
+        await apiFetch("/providers/oidc", { method: "PUT", body: JSON.stringify(oidc) });
+      }
+      if (Array.isArray(saml) && saml.length) {
+        await apiFetch("/providers/saml", { method: "PUT", body: JSON.stringify(saml) });
+      }
+
       setStatus("Initialized! You can now log in.");
     } catch (err: any) {
       setStatus(`Error: ${err.message}`);
@@ -120,6 +133,31 @@ export default function Setup() {
           Enable MSP multitenancy (off = single-tenant internal use)
         </label>
 
+        <fieldset style={{ border: `1px solid ${colors.surface}`, padding: "1rem" }}>
+          <legend>Identity Providers (optional JSON arrays)</legend>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>
+            OIDC providers
+            <textarea
+              value={oidcConfig}
+              onChange={(e) => setOidcConfig(e.target.value)}
+              rows={4}
+              style={inputStyle(colors)}
+            />
+          </label>
+          <label style={{ display: "block" }}>
+            SAML providers
+            <textarea
+              value={samlConfig}
+              onChange={(e) => setSamlConfig(e.target.value)}
+              rows={4}
+              style={inputStyle(colors)}
+            />
+          </label>
+          <p style={{ color: colors.muted, marginTop: "0.25rem" }}>
+            Example: {`[{\"name\":\"Okta\",\"config\":{...},\"enabled\":true}]`}
+          </p>
+        </fieldset>
+
         <button
           type="submit"
           style={{
@@ -150,3 +188,11 @@ const inputStyle = (colors: any) => ({
   color: colors.text,
   marginTop: 4,
 });
+
+function safeJson(text: string) {
+  try {
+    return JSON.parse(text || "[]");
+  } catch {
+    return [];
+  }
+}
