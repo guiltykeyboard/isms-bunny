@@ -2,7 +2,12 @@ name: ci-issue-manager
 
 on:
   workflow_run:
-    workflows: ["lint"]
+    workflows:
+      - "lint"
+      - "loc-badge"
+      - "pip-audit"
+      - "npm-audit"
+      - "nightly"
     types: [completed]
 
 jobs:
