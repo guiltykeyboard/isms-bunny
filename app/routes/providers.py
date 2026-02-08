@@ -82,6 +82,21 @@ async def list_oidc(
     return await _list(session, "oidc")
 
 
+@router.get("/public")
+async def list_public(session: Annotated[AsyncSession, Depends(get_session)]):
+    result = await session.execute(
+        text(
+            """
+            SELECT id, name, type, tenant_id
+            FROM idp_connections
+            WHERE enabled = true
+            ORDER BY name
+            """
+        )
+    )
+    return [dict(r) for r in result.mappings().all()]
+
+
 @router.put("/oidc")
 async def upsert_oidc(
     payload: list[dict],

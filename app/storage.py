@@ -57,19 +57,50 @@ def build_storage_client(
     default_access_key: Optional[str],
     default_secret: Optional[str],
     tenant_prefix: Optional[str],
+    tenant_type: Optional[str] = None,
 ) -> StorageClient:
+    """
+    Select between MSP shared bucket (with per-tenant prefixes) or BYO S3 config.
+    tenant_storage may include:
+      - use_msp_storage: bool
+      - bucket/region/endpoint/access_key/secret_key
+    """
+    use_msp = tenant_storage.get("use_msp_storage", False) if tenant_storage else False
+    effective_prefix = tenant_prefix
+    if use_msp and tenant_prefix:
+        effective_prefix = f"tenants/{tenant_prefix}"
+        if tenant_type == "internal_msp":
+            effective_prefix = f"msp/{tenant_prefix}"
     cfg = StorageConfig(
-        bucket=tenant_storage.get("bucket", default_bucket) if tenant_storage else default_bucket,
-        region=tenant_storage.get("region", default_region) if tenant_storage else default_region,
-        endpoint=tenant_storage.get("endpoint", default_endpoint)
-        if tenant_storage
-        else default_endpoint,
-        access_key=tenant_storage.get("access_key")
-        if tenant_storage
-        else default_access_key,
-        secret_key=tenant_storage.get("secret_key")
-        if tenant_storage
-        else default_secret,
-        prefix=tenant_prefix,
+        bucket=(
+            default_bucket
+            if use_msp
+            else tenant_storage.get("bucket", default_bucket)
+            if tenant_storage
+            else default_bucket
+        ),
+        region=(
+            default_region
+            if use_msp
+            else tenant_storage.get("region", default_region)
+            if tenant_storage
+            else default_region
+        ),
+        endpoint=(
+            tenant_storage.get("endpoint", default_endpoint)
+            if (tenant_storage and not use_msp)
+            else default_endpoint
+        ),
+        access_key=(
+            tenant_storage.get("access_key")
+            if (tenant_storage and not use_msp)
+            else default_access_key
+        ),
+        secret_key=(
+            tenant_storage.get("secret_key")
+            if (tenant_storage and not use_msp)
+            else default_secret
+        ),
+        prefix=effective_prefix,
     )
     return StorageClient(cfg)

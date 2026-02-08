@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from sqlalchemy import ARRAY, UUID, Boolean, ForeignKey, String, Text
+from sqlalchemy import ARRAY, JSON, UUID, Boolean, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship
 
@@ -14,6 +14,7 @@ class Tenant(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     fqdn: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     type: Mapped[str] = mapped_column(String, default="customer")
+    storage_config: Mapped[dict | None] = mapped_column(JSON, default=dict)
 
 
 class User(Base):

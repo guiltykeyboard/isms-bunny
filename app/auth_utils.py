@@ -2,9 +2,10 @@ import datetime
 from typing import Optional
 from uuid import UUID
 
+import jwt
 import pyotp
 from argon2 import PasswordHasher
-from jwt import decode as jwt_decode, encode as jwt_encode
+from fastapi import Response
 from webauthn import verify_authentication_response, verify_registration_response
 from webauthn.helpers.structs import (
     AuthenticationCredential,
@@ -50,16 +51,23 @@ def create_access_token(user_id: UUID, expires_minutes: Optional[int] = None) ->
     exp_minutes = expires_minutes or settings.access_token_expiry_minutes
     expire = datetime.datetime.utcnow() + datetime.timedelta(minutes=exp_minutes)
     to_encode = {"sub": str(user_id), "exp": expire}
-    return jwt_encode(to_encode, settings.jwt_secret, algorithm="HS256")
+    return jwt.encode(to_encode, settings.jwt_secret, algorithm="HS256")
 
 
 def decode_access_token(token: str) -> Optional[UUID]:
     try:
-        payload = jwt_decode(token, settings.jwt_secret, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
         sub = payload.get("sub")
         return UUID(sub) if sub else None
     except Exception:
         return None
+
+
+def jwt_decode_no_verify(token: str) -> dict:
+    try:
+        return jwt.decode(token, options={"verify_signature": False})
+    except Exception:
+        return {}
 
 
 # WebAuthn helpers (minimal stubs)
@@ -110,4 +118,29 @@ def verify_webauthn_authentication(
         expected_origin=origin,
         credential_public_key=stored_public_key,
         credential_current_sign_count=0,
+    )
+
+
+def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
+    """
+    Centralised cookie setter for access/refresh tokens.
+    Keeps cookies httpOnly/secure and aligned with config defaults.
+    """
+    response.set_cookie(
+        key=settings.cookie_name,
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        path="/",
+        max_age=settings.access_token_expiry_minutes * 60,
+    )
+    response.set_cookie(
+        key=settings.refresh_cookie_name,
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=settings.refresh_token_expiry_days * 24 * 3600,
+        path="/",
     )

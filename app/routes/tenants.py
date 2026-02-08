@@ -6,6 +6,7 @@ from sqlalchemy import insert, select, update as sql_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.authz import assert_tenant_access, enforce_current_tenant, require_msp_admin
+from app.context import current_tenant
 from app.db import get_session
 from app.deps import get_current_user_jwt
 from app.models import Tenant, User
@@ -89,6 +90,56 @@ async def update_tenant(
         raise HTTPException(status_code=404, detail="Tenant not found")
     await session.commit()
     return {"id": str(t.id), "name": t.name, "fqdn": t.fqdn, "type": t.type}
+
+
+@router.get("/current")
+async def current_tenant_info(
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    tenant_id = current_tenant()
+    if not tenant_id:
+        raise HTTPException(status_code=404, detail="Tenant not resolved")
+    await assert_tenant_access(session, user.id, tenant_id, user.is_msp_admin)
+    result = await session.execute(select(Tenant).where(Tenant.id == tenant_id))
+    t = result.scalar_one_or_none()
+    if not t:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    return {
+        "id": str(t.id),
+        "name": t.name,
+        "fqdn": t.fqdn,
+        "type": t.type,
+        "storage_config": getattr(t, "storage_config", None),
+    }
+
+
+@router.patch("/{tenant_id}/storage")
+async def update_tenant_storage(
+    tenant_id: UUID,
+    payload: dict,
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    """
+    Update per-tenant storage configuration (BYO S3-compatible).
+    """
+    require_msp_admin(user.is_msp_admin)
+    storage_cfg = payload.get("storage_config") or payload
+    result = await session.execute(
+        sql_update(Tenant)
+        .where(Tenant.id == tenant_id)
+        .values(storage_config=storage_cfg)
+        .returning(Tenant)
+    )
+    t = result.scalar_one_or_none()
+    if not t:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    await session.commit()
+    return {
+        "id": str(t.id),
+        "storage_config": storage_cfg,
+    }
 
 
 @router.delete("/{tenant_id}", status_code=status.HTTP_204_NO_CONTENT)

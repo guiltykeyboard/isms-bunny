@@ -2,10 +2,11 @@ from base64 import urlsafe_b64decode
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import auth_utils
 from app.auth_utils import (
     build_webauthn_authentication_options,
     build_webauthn_registration_options,
@@ -16,6 +17,7 @@ from app.authz import require_msp_admin
 from app.db import get_session
 from app.deps import get_current_user_jwt
 from app.settings_store import get_setting, set_setting
+from app.tokens import create_refresh_token
 
 router = APIRouter(prefix="/webauthn", tags=["webauthn"])
 
@@ -106,8 +108,18 @@ async def login_options(
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
     user_id = payload.get("user_id")
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id required")
+    email = payload.get("email")
+    if not user_id and not email:
+        raise HTTPException(status_code=400, detail="user_id or email required")
+    if not user_id and email:
+        row = await session.execute(
+            text("SELECT id FROM users WHERE lower(email)=lower(:email)"),
+            {"email": email},
+        )
+        found = row.scalar_one_or_none()
+        if not found:
+            raise HTTPException(status_code=404, detail="User not found")
+        user_id = found
     cred_rows = await session.execute(
         text(
             """
@@ -136,11 +148,12 @@ async def login_options(
 async def login_verify(
     payload: dict,
     session: Annotated[AsyncSession, Depends(get_session)],
+    response: Response,
 ):
     user_id = payload.get("user_id")
     credential = payload.get("credential")
-    if not user_id or not credential:
-        raise HTTPException(status_code=400, detail="user_id and credential required")
+    if not credential:
+        raise HTTPException(status_code=400, detail="credential required")
 
     stored_chal = await get_setting(session, f"webauthn_auth_{user_id}")
     if not stored_chal:
@@ -153,7 +166,7 @@ async def login_verify(
     row = await session.execute(
         text(
             """
-            SELECT public_key, sign_count
+            SELECT public_key, sign_count, user_id
             FROM webauthn_credentials
             WHERE credential_id=:cid AND user_id=:uid
             """
@@ -181,8 +194,25 @@ async def login_verify(
             "cid": cred_id_bytes,
         },
     )
+    # issue login tokens
+    token_row = await session.execute(
+        text("SELECT id FROM users WHERE id=:uid"), {"uid": stored_cred.user_id}
+        if hasattr(stored_cred, "user_id")
+        else {"uid": user_id}
+    )
+    user_row = token_row.scalar_one_or_none()
+    final_user_id = user_row or user_id
+    access = auth_utils.create_access_token(final_user_id)
+    refresh = create_refresh_token(final_user_id)
+    auth_utils.set_auth_cookies(response, access, refresh)
     await session.commit()
-    return {"detail": "webauthn ok", "user_id": user_id}
+    return {
+        "detail": "webauthn ok",
+        "user_id": str(final_user_id),
+        "access_token": access,
+        "refresh_token": refresh,
+        "token_type": "bearer",
+    }
 
 
 @router.get("/credentials/me")
