@@ -4,7 +4,7 @@ from uuid import UUID
 
 import pyotp
 from argon2 import PasswordHasher
-from jose import jwt
+from jwt import decode as jwt_decode, encode as jwt_encode
 from webauthn import verify_authentication_response, verify_registration_response
 from webauthn.helpers.structs import (
     AuthenticationCredential,
@@ -50,12 +50,12 @@ def create_access_token(user_id: UUID, expires_minutes: Optional[int] = None) ->
     exp_minutes = expires_minutes or settings.access_token_expiry_minutes
     expire = datetime.datetime.utcnow() + datetime.timedelta(minutes=exp_minutes)
     to_encode = {"sub": str(user_id), "exp": expire}
-    return jwt.encode(to_encode, settings.jwt_secret, algorithm="HS256")
+    return jwt_encode(to_encode, settings.jwt_secret, algorithm="HS256")
 
 
 def decode_access_token(token: str) -> Optional[UUID]:
     try:
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+        payload = jwt_decode(token, settings.jwt_secret, algorithms=["HS256"])
         sub = payload.get("sub")
         return UUID(sub) if sub else None
     except Exception:
