@@ -1,0 +1,40 @@
+name: loc-badge
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  loc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compute LOC and update badge
+        run: |
+          npx --yes cloc --json . > /tmp/loc.json
+          LINES=$(jq '.SUM.code' /tmp/loc.json)
+          echo "LOC=$LINES" >> $GITHUB_ENV
+          npx --yes badge-maker "label=lines of code&message=${LINES}&color=4B2C82" > assets/loc.svg
+      - name: Commit badge update
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          if git diff --quiet assets/loc.svg; then
+            echo "No badge changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/loc.svg
+          git commit -m "chore: update LOC badge"
+          git push
+      - name: Upload badge artifact
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: loc-badge
+          path: assets/loc.svg

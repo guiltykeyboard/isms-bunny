@@ -1,0 +1,11 @@
+Usage: badge label message [:color] [@style]
+Or:    badge label message color [labelColor] [@style]
+
+  color, labelColor:
+    one of brightgreen, green, yellow, yellowgreen, orange, red, blue, grey, lightgrey.
+    #xxx (three hex digits)
+    #xxxxxx (six hex digits)
+    color (CSS color)
+
+Eg: badge cactus grown :green @flat
+
