@@ -12,6 +12,9 @@ fi
 if [ -f db/migrations/004_tenant_type.sql ]; then
   psql "${DB_URL}" -f db/migrations/004_tenant_type.sql
 fi
+if [ -f db/migrations/005_auth.sql ]; then
+  psql "${DB_URL}" -f db/migrations/005_auth.sql
+fi
 if [ -f db/migrations/003_seed_dev.sql ]; then
   psql "${DB_URL}" -f db/migrations/003_seed_dev.sql
 fi

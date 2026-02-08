@@ -5,14 +5,14 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
-from app.deps import get_current_user
+from app.deps import get_current_user_jwt
 from app.models import User
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/me")
-async def me(user: Annotated[User, Depends(get_current_user)]):
+async def me(user: Annotated[User, Depends(get_current_user_jwt)]):
     return {
         "id": str(user.id),
         "email": user.email,
@@ -24,7 +24,7 @@ async def me(user: Annotated[User, Depends(get_current_user)]):
 @router.patch("/me/theme")
 async def update_theme(
     payload: dict,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_current_user_jwt)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
     new_pref = payload.get("theme_preference")

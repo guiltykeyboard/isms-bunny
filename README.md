@@ -43,6 +43,11 @@ Dev defaults
 - Seeded MSP admin user: `admin@example.com` (id `00000000-0000-0000-0000-000000000002`, theme `system`).
 - Host resolution: requests to `localhost` map to the seeded tenant; replace with real FQDNs in production.
 
+Auth (early stub)
+- Local login: `POST /auth/login` with `{ "email": "admin@example.com", "password": "ChangeMe!123" }` (optional `totp_code` if MFA enabled). Returns JWT and sets httpOnly cookie `access_token`.
+- Logout: `POST /auth/logout` clears cookie.
+- Protected routes use JWT bearer header or the cookie; dev headers `X-User-Id` / `X-Is-Msp-Admin` still work for local testing.
+
 Dev quality checks
 - Ruff lint: `pip install -r requirements-dev.txt` then `ruff check .`
 - CI lint workflow auto-creates/updates an issue (label `ci:lint`) on failures and auto-closes when passing.

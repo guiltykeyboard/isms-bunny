@@ -38,6 +38,8 @@ async def resolve_tenant(request: Request):
                 tenant_id = UUID(settings.default_tenant_id)
             except ValueError:
                 tenant_id = None
+    if tenant_id is None:
+        raise HTTPException(status_code=404, detail="Tenant not found for host")
 
     set_tenant(tenant_id)
     set_public(request.url.path.startswith("/trust"))
