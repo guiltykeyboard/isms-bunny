@@ -58,6 +58,14 @@ export default function StorageAdmin() {
           />
           Use MSP shared storage (recommended)
         </label>
+        <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <input
+            type="checkbox"
+            checked={cfg.allow_local_login ?? true}
+            onChange={(e) => setCfg({ ...cfg, allow_local_login: e.target.checked })}
+          />
+          Allow local login (break-glass)
+        </label>
         {!cfg.use_msp_storage && (
           <>
             <input

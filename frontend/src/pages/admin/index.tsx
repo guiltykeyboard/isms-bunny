@@ -6,6 +6,7 @@ export default function AdminIndex() {
     { href: "/admin/memberships", label: "Memberships" },
     { href: "/admin/providers", label: "Identity Providers" },
     { href: "/admin/webauthn", label: "Passkeys" },
+    { href: "/admin/saml-logs", label: "SAML Logs" },
   ];
   return (
     <div style={{ padding: "2rem", fontFamily: "Inter, system-ui, sans-serif" }}>
