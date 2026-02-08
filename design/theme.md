@@ -2,7 +2,7 @@
 
 Dark-mode forward, playful but professional.
 
-## Palette
+## Palette (dark)
 - Primary: Dark Purple `#4B2C82`
 - Accent: Brighter Purple `#6F3CCF`
 - Background: Soft Near-Black `#0F1116`
@@ -13,6 +13,24 @@ Dark-mode forward, playful but professional.
 - Warning: `#F1C40F`
 - Danger: `#E74C3C`
 - Info: `#3498DB`
+
+## Palette (light)
+- Primary: Dark Purple `#4B2C82`
+- Accent: Brighter Purple `#6F3CCF`
+- Background: Soft White `#F7F8FB`
+- Surface: Light Grey `#E6E8EF`
+- Text Primary: Near-Black `#0F1116`
+- Text Muted: `#4B5565`
+- Success: `#229954`
+- Warning: `#D4AC0D`
+- Danger: `#C0392B`
+- Info: `#2874A6`
+
+## Mode switching
+- Modes: `system` (default, respects `prefers-color-scheme`), `dark`, `light`.
+- Per-user preference stored in profile; fallback to `system` if unset.
+- On first load: read user preference → if `system`, use media query to select palette; persist choice in local storage and user profile when authenticated.
+- Provide quick toggle in header and in user settings.
 
 ## UI notes
 - Rounded corners, medium radius; avoid heavy drop-shadows.

@@ -5,7 +5,7 @@ Last updated: 2026-02-08
 ## Stack choices
 - Reverse proxy/TLS: Caddy (ACME, SNI routing, simple config API).
 - Backend: Python + FastAPI (typed, async), Uvicorn/Gunicorn.
-- Frontend: Next.js/React served via the same container (or separate static container later).
+- Frontend: Next.js/React served via the same container (or separate static container later); supports light/dark/system theming.
 - Database: Postgres with Row-Level Security (RLS) enforcing tenant isolation.
 - Cache/queue: Redis (rate limits, background jobs).
 - Object storage: S3-compatible (Wasabi preferred); pluggable per-tenant credentials; MinIO only for local dev.
@@ -41,6 +41,7 @@ Last updated: 2026-02-08
 - Tenant CISO: full manage within assigned tenants.
 - Auditor: read-only access within assigned tenants; can export.
 - Manager/Leadership: can submit records (meeting minutes, NC reports) and view assigned areas; limited admin.
+- User experience: store theme preference per user (`system` default; respects `prefers-color-scheme`).
 
 ## Security controls (built-in)
 - HTTPS-only; HSTS; CSP; secure cookies.
