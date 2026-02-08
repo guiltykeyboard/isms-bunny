@@ -4,24 +4,23 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import auth_utils
+from app.auth_utils import (
+    build_webauthn_authentication_options,
+    build_webauthn_registration_options,
+    verify_webauthn_authentication,
+    verify_webauthn_registration,
+)
 from app.db import get_session
 from app.deps import get_current_user_jwt
 from app.settings_store import get_setting, set_setting
-from app.auth_utils import (
-    build_webauthn_registration_options,
-    verify_webauthn_registration,
-    build_webauthn_authentication_options,
-    verify_webauthn_authentication,
-)
 
 router = APIRouter(prefix="/webauthn", tags=["webauthn"])
 
 
 @router.post("/register/options")
 async def registration_options(
-    user=Depends(get_current_user_jwt),
     session: Annotated[AsyncSession, Depends(get_session)],
+    user: Annotated[object, Depends(get_current_user_jwt)],
 ):
     options = build_webauthn_registration_options(UUID(user.id), user.email)
     await set_setting(
@@ -37,8 +36,8 @@ async def registration_options(
 @router.post("/register/verify")
 async def registration_verify(
     payload: dict,
-    user=Depends(get_current_user_jwt),
     session: Annotated[AsyncSession, Depends(get_session)],
+    user: Annotated[object, Depends(get_current_user_jwt)],
 ):
     stored = await get_setting(session, f"webauthn_reg_{user.id}")
     if not stored or "challenge" not in stored:
@@ -49,7 +48,7 @@ async def registration_verify(
     try:
         verify_webauthn_registration(credential, stored["challenge"].encode())
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Verification failed: {exc}")
+        raise HTTPException(status_code=400, detail=f"Verification failed: {exc}") from None
     await set_setting(
         session,
         f"webauthn_cred_{user.id}",

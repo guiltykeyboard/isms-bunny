@@ -1,8 +1,7 @@
-import datetime
 from typing import Optional
 from uuid import UUID
 
-from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from app.config import get_settings
 

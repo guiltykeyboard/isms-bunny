@@ -59,11 +59,11 @@ Data durability
 
 ## UI Screens (dark theme)
 - Setup wizard (MSP toggle, S3, admin user):  
-  ![Setup Wizard](/Users/mstoffel/Repositories/isms-bunny/assets/ui-setup.png)
+  ![Setup Wizard](assets/ui-setup.png)
 - Admin tenants & memberships:  
-  ![Admin](/Users/mstoffel/Repositories/isms-bunny/assets/ui-admin.png)
+  ![Admin](assets/ui-admin.png)
 - Trust page preview:  
-  ![Trust Preview](/Users/mstoffel/Repositories/isms-bunny/assets/ui-trust.png)
+  ![Trust Preview](assets/ui-trust.png)
 
 ## Structure
 - `design/` — requirements, architecture, trust page notes, theme.
@@ -75,7 +75,7 @@ Data durability
 ## Theme
 Dark-mode forward with light-mode option (see `design/theme.md` for details).
 
-| Mode  | Background | Surface | Primary | Accent | Text Primary | Text Muted |
+| Mode | Background | Surface | Primary | Accent | Text Primary | Text Muted |
 | --- | --- | --- | --- | --- | --- | --- |
-| Dark | `#0F1116` | `#1A1D24` | `#4B2C82` | `#6F3CCF` | `#F4F5FB` | `#C5C8D4` |
-| Light | `#F7F8FB` | `#E6E8EF` | `#4B2C82` | `#6F3CCF` | `#0F1116` | `#4B5565` |
+| Dark | `#0F1116` <span style="display:inline-block;width:16px;height:16px;border:1px solid #ccc;background:#0F1116;"></span> | `#1A1D24` <span style="display:inline-block;width:16px;height:16px;border:1px solid #ccc;background:#1A1D24;"></span> | `#4B2C82` <span style="display:inline-block;width:16px;height:16px;border:1px solid #ccc;background:#4B2C82;"></span> | `#6F3CCF` <span style="display:inline-block;width:16px;height:16px;border:1px solid #ccc;background:#6F3CCF;"></span> | `#F4F5FB` <span style="display:inline-block;width:16px;height:16px;border:1px solid #ccc;background:#F4F5FB;"></span> | `#C5C8D4` <span style="display:inline-block;width:16px;height:16px;border:1px solid #ccc;background:#C5C8D4;"></span> |
+| Light | `#F7F8FB` <span style="display:inline-block;width:16px;height:16px;border:1px solid #ccc;background:#F7F8FB;"></span> | `#E6E8EF` <span style="display:inline-block;width:16px;height:16px;border:1px solid #ccc;background:#E6E8EF;"></span> | `#4B2C82` <span style="display:inline-block;width:16px;height:16px;border:1px solid #ccc;background:#4B2C82;"></span> | `#6F3CCF` <span style="display:inline-block;width:16px;height:16px;border:1px solid #ccc;background:#6F3CCF;"></span> | `#0F1116` <span style="display:inline-block;width:16px;height:16px;border:1px solid #ccc;background:#0F1116;"></span> | `#4B5565` <span style="display:inline-block;width:16px;height:16px;border:1px solid #ccc;background:#4B5565;"></span> |
