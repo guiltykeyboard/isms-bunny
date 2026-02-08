@@ -31,6 +31,7 @@ async def setup_initialize(
     admin_email = payload.get("admin_email")
     admin_password = payload.get("admin_password")
     storage_cfg = payload.get("storage", {})
+    msp_mode = payload.get("msp_mode", True)
 
     if not admin_email or not admin_password:
         raise HTTPException(status_code=400, detail="admin_email and admin_password required")
@@ -39,10 +40,15 @@ async def setup_initialize(
     result = await session.execute(
         """
         INSERT INTO tenants (name, fqdn, type, storage_config)
-        VALUES (:name, :fqdn, 'internal_msp', :storage)
+        VALUES (:name, :fqdn, :type, :storage)
         RETURNING id
         """,
-        {"name": company, "fqdn": fqdn.lower(), "storage": storage_cfg},
+        {
+            "name": company,
+            "fqdn": fqdn.lower(),
+            "type": "internal_msp" if msp_mode else "customer",
+            "storage": storage_cfg,
+        },
     )
     tenant_id = result.scalar_one()
 

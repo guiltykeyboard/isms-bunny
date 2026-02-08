@@ -21,6 +21,9 @@ fi
 if [ -f db/migrations/007_settings.sql ]; then
   psql "${DB_URL}" -f db/migrations/007_settings.sql
 fi
+if [ -f db/migrations/008_multitenant_flag.sql ]; then
+  psql "${DB_URL}" -f db/migrations/008_multitenant_flag.sql
+fi
 if [ -f db/migrations/003_seed_dev.sql ]; then
   psql "${DB_URL}" -f db/migrations/003_seed_dev.sql
 fi

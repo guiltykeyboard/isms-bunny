@@ -13,6 +13,7 @@ const defaultStorage = {
 export default function Setup() {
   const [company, setCompany] = useState("MSP Tenant");
   const [fqdn, setFqdn] = useState("localhost");
+  const [mspMode, setMspMode] = useState(true);
   const [email, setEmail] = useState("admin@example.com");
   const [password, setPassword] = useState("");
   const [storage, setStorage] = useState(defaultStorage);
@@ -30,6 +31,7 @@ export default function Setup() {
         body: JSON.stringify({
           company_name: company,
           fqdn,
+          msp_mode: mspMode,
           admin_email: email,
           admin_password: password,
           storage,
@@ -109,6 +111,14 @@ export default function Setup() {
             </label>
           ))}
         </fieldset>
+        <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <input
+            type="checkbox"
+            checked={mspMode}
+            onChange={(e) => setMspMode(e.target.checked)}
+          />
+          Enable MSP multitenancy (off = single-tenant internal use)
+        </label>
 
         <button
           type="submit"
