@@ -8,6 +8,8 @@ export default function Profile() {
   );
   const colors = palette[resolveMode(mode)];
   const [email, setEmail] = useState("");
+  const [authPref, setAuthPref] = useState<"external" | "local" | "either">("external");
+  const [allowLocalFallback, setAllowLocalFallback] = useState(false);
   const [creds, setCreds] = useState<any[]>([]);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -15,6 +17,17 @@ export default function Profile() {
     try {
       const data = await apiFetch("/webauthn/credentials/me");
       setCreds(data);
+    } catch (e: any) {
+      setStatus(e.message);
+    }
+  };
+
+  const loadProfile = async () => {
+    try {
+      const me = await apiFetch("/users/me");
+      setEmail(me.email);
+      setAuthPref(me.auth_preference || "external");
+      setAllowLocalFallback(Boolean(me.allow_local_fallback));
     } catch (e: any) {
       setStatus(e.message);
     }
@@ -59,6 +72,21 @@ export default function Profile() {
     }
   };
 
+  const saveAuthPref = async () => {
+    try {
+      await apiFetch("/users/me/auth", {
+        method: "PATCH",
+        body: JSON.stringify({
+          auth_preference: authPref,
+          allow_local_fallback: allowLocalFallback,
+        }),
+      });
+      setStatus("Preferences saved");
+    } catch (e: any) {
+      setStatus(e.message || "Save failed");
+    }
+  };
+
   const deleteCred = async (id: string) => {
     await apiFetch(`/webauthn/credentials/me/${id}`, { method: "DELETE" });
     loadCreds();
@@ -66,12 +94,36 @@ export default function Profile() {
 
   useEffect(() => {
     loadCreds();
+    loadProfile();
   }, []);
 
   return (
     <div style={{ padding: "2rem", background: colors.background, color: colors.text, minHeight: "100vh" }}>
       <h1>My Profile</h1>
       <p style={{ color: colors.muted }}>Register a passkey for passwordless login.</p>
+      <div style={{ marginTop: "1rem", display: "grid", gap: "0.6rem", maxWidth: 420 }}>
+        <label>Auth preference</label>
+        <select
+          value={authPref}
+          onChange={(e) => setAuthPref(e.target.value as any)}
+          style={input(colors)}
+        >
+          <option value="external">External (IdP)</option>
+          <option value="local">Local only</option>
+          <option value="either">Either (prefer external)</option>
+        </select>
+        <label style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+          <input
+            type="checkbox"
+            checked={allowLocalFallback}
+            onChange={(e) => setAllowLocalFallback(e.target.checked)}
+          />
+          Allow local fallback (break-glass)
+        </label>
+        <button onClick={saveAuthPref} style={btn(colors)}>
+          Save auth preferences
+        </button>
+      </div>
       <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginTop: "1rem" }}>
         <button onClick={registerPasskey} style={btn(colors)}>
           Register Passkey

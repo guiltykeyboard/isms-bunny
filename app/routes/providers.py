@@ -71,6 +71,29 @@ async def _upsert_many(session: AsyncSession, provider_type: str, payload: list[
                 params,
             )
     await session.commit()
+    # If IdP is enabled for a tenant, default users (without local fallback) to external auth
+    tenant_ids = {
+        item.get("tenant_id")
+        for item in payload
+        if item.get("tenant_id") and item.get("enabled", True)
+    }
+    for tid in tenant_ids:
+        await session.execute(
+            text(
+                """
+                UPDATE users
+                SET auth_preference = 'external'
+                WHERE id IN (
+                    SELECT u.id FROM users u
+                    JOIN memberships m ON m.user_id = u.id
+                    WHERE m.tenant_id = :tid AND COALESCE(u.allow_local_fallback, false) = false
+                )
+                """
+            ),
+            {"tid": tid},
+        )
+    if tenant_ids:
+        await session.commit()
 
 
 @router.get("/oidc")
