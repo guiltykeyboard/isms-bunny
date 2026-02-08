@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { palette, ThemeMode } from "../styles/theme";
+import { TrustCard } from "../components/TrustCard";
+import Link from "next/link";
 
 export default function Home({
   themeMode,
@@ -49,30 +51,33 @@ export default function Home({
       </header>
 
       <main style={{ marginTop: "2rem", display: "grid", gap: "1rem" }}>
-        <section style={{ background: colors.surface, padding: "1.25rem", borderRadius: "12px" }}>
-          <h2 style={{ marginTop: 0 }}>Trust Page</h2>
+        <TrustCard title="Trust Page">
           <p style={{ color: colors.muted }}>
             Custom domains via SNI (Caddy) will render tenant-specific trust content with signed
             URLs for gated docs.
           </p>
-          <button
+          <Link
+            href="/trust-preview"
             style={{
+              display: "inline-block",
+              marginTop: "0.5rem",
               background: colors.primary,
               color: colors.text,
-              border: "none",
               padding: "0.6rem 1.2rem",
               borderRadius: "10px",
-              cursor: "pointer",
+              textDecoration: "none",
             }}
           >
             Preview (coming soon)
-          </button>
-        </section>
-        <section style={{ background: colors.surface, padding: "1.25rem", borderRadius: "12px" }}>
-          <h2 style={{ marginTop: 0 }}>Status</h2>
+          </Link>
+        </TrustCard>
+        <TrustCard title="Status">
           <p>API ping: {token ?? "…"}</p>
           <p>Resolved theme: {resolvedTheme}</p>
-        </section>
+          <p style={{ color: colors.muted, marginTop: "0.5rem" }}>
+            Need to run setup? Head to <Link href="/setup">/setup</Link>.
+          </p>
+        </TrustCard>
       </main>
     </div>
   );

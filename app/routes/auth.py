@@ -8,6 +8,7 @@ from app import auth_utils
 from app.config import get_settings
 from app.db import get_session
 from app.models import User
+from app.tokens import create_refresh_token, decode_refresh_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
@@ -56,6 +57,7 @@ async def login(
             raise HTTPException(status_code=401, detail="Invalid or missing TOTP code")
 
     token = auth_utils.create_access_token(user.id)
+    refresh = create_refresh_token(user.id)
     response.set_cookie(
         key=settings.cookie_name,
         value=token,
@@ -63,13 +65,44 @@ async def login(
         secure=True,
         samesite="lax",
     )
-    return {"access_token": token, "token_type": "bearer"}
+    response.set_cookie(
+        key=settings.refresh_cookie_name,
+        value=refresh,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=settings.refresh_token_expiry_days * 24 * 3600,
+    )
+    return {"access_token": token, "refresh_token": refresh, "token_type": "bearer"}
 
 
 @router.post("/logout")
 async def logout(response: Response):
     response.delete_cookie(settings.cookie_name)
+    response.delete_cookie(settings.refresh_cookie_name)
     return {"detail": "logged out"}
+
+
+@router.post("/refresh")
+async def refresh_token(
+    response: Response,
+    payload: dict,
+):
+    token = payload.get("refresh_token")
+    if not token:
+        raise HTTPException(status_code=400, detail="refresh_token required")
+    user_id = decode_refresh_token(token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="invalid refresh token")
+    access = auth_utils.create_access_token(user_id)
+    response.set_cookie(
+        key=settings.cookie_name,
+        value=access,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+    )
+    return {"access_token": access, "token_type": "bearer"}
 
 
 # OIDC / SAML placeholders

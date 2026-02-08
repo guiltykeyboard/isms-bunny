@@ -9,7 +9,9 @@ class Settings(BaseSettings):
     secret_key: str = Field(default="change-me")
     jwt_secret: str = Field(default="change-me-too")
     access_token_expiry_minutes: int = Field(default=60)
+    refresh_token_expiry_days: int = Field(default=30)
     cookie_name: str = Field(default="access_token")
+    refresh_cookie_name: str = Field(default="refresh_token")
 
     default_tenant_fqdn: str = Field(default="localhost")
     default_tenant_id: str | None = Field(default="00000000-0000-0000-0000-000000000001")
