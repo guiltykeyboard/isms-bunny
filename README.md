@@ -14,7 +14,13 @@ Open-source, MSP-friendly ISMS and trust center scaffold. Goals:
    docker compose -f infra/docker-compose.yml up --build
    ```
 3. Migrations: apply `db/migrations/001_init.sql` to the Postgres instance.
+   - For local dev you can run `scripts/apply_migrations.sh` (uses `DATABASE_URL` if set).
 4. Open `http://localhost:8000/health` for a quick check.
+5. Dev auth stub: send headers `X-User-Id: <uuid>` and optional `X-Is-Msp-Admin: true` to hit protected endpoints. Real auth to be added later.
+
+Theme preference
+- Modes: `system` (default, honors browser `prefers-color-scheme`), `dark`, `light`.
+- API: `GET /users/me` returns `theme_preference`; `PATCH /users/me/theme` with `{"theme_preference":"dark"}` updates it.
 
 ## Structure
 - `design/` — requirements, architecture, trust page notes, theme.
