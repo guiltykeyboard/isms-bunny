@@ -1,9 +1,9 @@
 from fastapi import HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Membership
 from app.context import current_tenant
+from app.models import Membership
 
 
 def require_msp_admin(is_admin: bool):

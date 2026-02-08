@@ -1,7 +1,8 @@
-from sqlalchemy.orm import declarative_base, relationship, Mapped, mapped_column
-from sqlalchemy import String, Boolean, ForeignKey, ARRAY, Text, UUID
-from sqlalchemy.dialects.postgresql import CITEXT
 from uuid import uuid4
+
+from sqlalchemy import ARRAY, UUID, Boolean, ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import CITEXT
+from sqlalchemy.orm import Mapped, declarative_base, mapped_column, relationship
 
 Base = declarative_base()
 

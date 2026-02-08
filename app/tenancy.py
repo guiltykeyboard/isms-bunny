@@ -1,11 +1,12 @@
-from fastapi import Request, HTTPException
 from uuid import UUID
+
+from fastapi import HTTPException, Request
 from sqlalchemy import select
 
-from app.context import set_tenant, set_public
+from app.config import get_settings
+from app.context import set_public, set_tenant
 from app.db import SessionLocal
 from app.models import Tenant
-from app.config import get_settings
 
 
 async def resolve_tenant(request: Request):

@@ -1,20 +1,22 @@
+from typing import Annotated
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, insert
 
-from app.deps import get_current_user
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import insert, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.authz import assert_tenant_access, enforce_current_tenant, require_msp_admin
 from app.db import get_session
-from app.models import Tenant
-from app.authz import require_msp_admin, assert_tenant_access, enforce_current_tenant
+from app.deps import get_current_user
+from app.models import Tenant, User
 
 router = APIRouter(prefix="/tenants", tags=["tenants"])
 
 
 @router.get("")
 async def list_tenants(
-    user=Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
 ):
     require_msp_admin(user.is_msp_admin)
     result = await session.execute(select(Tenant))
@@ -28,8 +30,8 @@ async def list_tenants(
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_tenant(
     payload: dict,
-    user=Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
 ):
     require_msp_admin(user.is_msp_admin)
     name = payload.get("name")
@@ -51,8 +53,8 @@ async def create_tenant(
 @router.get("/{tenant_id}")
 async def get_tenant(
     tenant_id: UUID,
-    user=Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
 ):
     await assert_tenant_access(session, user.id, tenant_id, user.is_msp_admin)
     enforce_current_tenant(tenant_id)

@@ -1,9 +1,11 @@
+from typing import Annotated
 from uuid import UUID
-from fastapi import Header, HTTPException, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from app.context import set_user, set_msp_admin, current_user
+from fastapi import Depends, Header, HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.context import current_user, set_msp_admin, set_user
 from app.db import get_session
 from app.models import User
 
@@ -23,7 +25,9 @@ async def inject_user(
         try:
             user_id = UUID(x_user_id)
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid X-User-Id header")
+            raise HTTPException(
+                status_code=400, detail="Invalid X-User-Id header"
+            ) from None
     is_admin = (x_is_msp_admin or "").lower() == "true"
 
     set_user(user_id)
@@ -32,8 +36,8 @@ async def inject_user(
 
 
 async def get_current_user(
-    _: UUID | None = Depends(inject_user),
-    session: AsyncSession = Depends(get_session),
+    _user_injected: Annotated[UUID | None, Depends(inject_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> User:
     if current_user() is None:
         raise HTTPException(status_code=401, detail="Unauthenticated (dev stub)")

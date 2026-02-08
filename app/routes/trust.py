@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from app.context import current_tenant
 
 router = APIRouter(tags=["trust"])
