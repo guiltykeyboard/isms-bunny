@@ -2,3 +2,9 @@
 
 # Local scratch context for Codex assistance (never committed)
 context/
+
+# Environment and Python cruft
+.env
+__pycache__/
+.venv/
+.pytest_cache/

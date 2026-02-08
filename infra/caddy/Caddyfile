@@ -1,0 +1,21 @@
+# Placeholder Caddyfile for ISMS-Bunny
+
+{
+  email admin@example.com
+  # optional: acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+# Catch-all; in production define site blocks per tenant host or wildcard.
+*.example.com, example.com {
+  tls {
+    # Caddy handles SNI + ACME automatically.
+  }
+
+  # Trust pages and app traffic reverse-proxied to FastAPI/Next.js
+  reverse_proxy app:8000
+}
+
+# Health check endpoint (no auth)
+:8080/health {
+  respond "ok"
+}
