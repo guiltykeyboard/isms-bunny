@@ -46,6 +46,33 @@ async def trust_content(session: Annotated[AsyncSession, Depends(get_session)]):
     return {"tenant": str(tenant_id), **dict(zip(keys, row, strict=False))}
 
 
+@router.get("/trust/public/{fqdn}")
+async def public_trust_page(fqdn: str, session: Annotated[AsyncSession, Depends(get_session)]):
+    result = await session.execute(
+        """
+        SELECT t.id, t.name, tp.overview_md, tp.policies, tp.attestations,
+               tp.subprocessors, tp.status_banner
+        FROM trust_pages tp
+        JOIN tenants t ON tp.tenant_id = t.id
+        WHERE lower(t.fqdn) = lower(:fqdn)
+        """,
+        {"fqdn": fqdn},
+    )
+    row = result.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Trust page not found")
+    keys = [
+        "tenant_id",
+        "tenant_name",
+        "overview_md",
+        "policies",
+        "attestations",
+        "subprocessors",
+        "status_banner",
+    ]
+    return dict(zip(keys, row, strict=False))
+
+
 @router.put("/trust/content")
 async def update_trust_content(
     payload: dict,
