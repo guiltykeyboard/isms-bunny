@@ -57,6 +57,14 @@ Data durability
 - Postgres and Caddy cert/config data use named volumes (`db_data`, `caddy_data`, `caddy_config`), so pulling new images will not lose state.
 - Object storage is external S3-compatible (Wasabi/AWS/etc.); assets survive container refreshes.
 
+## UI Screens (dark theme)
+- Setup wizard (MSP toggle, S3, admin user):  
+  ![Setup Wizard](/Users/mstoffel/Repositories/isms-bunny/assets/ui-setup.png)
+- Admin tenants & memberships:  
+  ![Admin](/Users/mstoffel/Repositories/isms-bunny/assets/ui-admin.png)
+- Trust page preview:  
+  ![Trust Preview](/Users/mstoffel/Repositories/isms-bunny/assets/ui-trust.png)
+
 ## Structure
 - `design/` — requirements, architecture, trust page notes, theme.
 - `infra/` — docker-compose and Caddy placeholder.
