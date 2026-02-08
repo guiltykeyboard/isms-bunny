@@ -58,21 +58,7 @@ async def login(
 
     token = auth_utils.create_access_token(user.id)
     refresh = create_refresh_token(user.id)
-    response.set_cookie(
-        key=settings.cookie_name,
-        value=token,
-        httponly=True,
-        secure=True,
-        samesite="lax",
-    )
-    response.set_cookie(
-        key=settings.refresh_cookie_name,
-        value=refresh,
-        httponly=True,
-        secure=True,
-        samesite="lax",
-        max_age=settings.refresh_token_expiry_days * 24 * 3600,
-    )
+    _set_auth_cookies(response, token, refresh)
     return {"access_token": token, "refresh_token": refresh, "token_type": "bearer"}
 
 
@@ -95,14 +81,28 @@ async def refresh_token(
     if not user_id:
         raise HTTPException(status_code=401, detail="invalid refresh token")
     access = auth_utils.create_access_token(user_id)
+    _set_auth_cookies(response, access, token)
+    return {"access_token": access, "token_type": "bearer"}
+
+
+def _set_auth_cookies(response: Response, access_token: str, refresh_token: str):
     response.set_cookie(
         key=settings.cookie_name,
-        value=access,
+        value=access_token,
         httponly=True,
         secure=True,
         samesite="lax",
+        path="/",
     )
-    return {"access_token": access, "token_type": "bearer"}
+    response.set_cookie(
+        key=settings.refresh_cookie_name,
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=settings.refresh_token_expiry_days * 24 * 3600,
+        path="/",
+    )
 
 
 # OIDC / SAML placeholders
