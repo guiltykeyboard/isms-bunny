@@ -1,8 +1,8 @@
 -- Seed a default tenant and MSP admin for local development
 -- Safe to rerun; uses fixed UUIDs.
 
-INSERT INTO tenants (id, name, fqdn, status)
-VALUES ('00000000-0000-0000-0000-000000000001', 'Dev Tenant', 'localhost', 'active')
+INSERT INTO tenants (id, name, fqdn, status, type)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Dev Tenant', 'localhost', 'active', 'internal_msp')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO users (id, email, full_name, is_msp_admin, status, theme_preference)

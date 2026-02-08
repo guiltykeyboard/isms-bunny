@@ -11,6 +11,7 @@ Last updated: 2026-02-08
 - Object storage: S3-compatible (Wasabi preferred); pluggable per-tenant credentials; MinIO only for local dev.
 - Async tasks: Celery/RQ for evidence processing, exports, scheduled reminders.
 - Auth: OIDC-ready; local login + TOTP; JWT access tokens; per-tenant API keys; optional SSO later.
+  - Passkeys/WebAuthn for local auth; OIDC for Okta/Azure/Google; generic SAML 2.0 for other IdPs.
 
 ## Containers (docker-compose)
 - `caddy`: terminates TLS, handles SNI, routes `Host` to app; serves static trust pages from cache; auto-cert with ACME.
@@ -42,6 +43,7 @@ Last updated: 2026-02-08
 - Auditor: read-only access within assigned tenants; can export.
 - Manager/Leadership: can submit records (meeting minutes, NC reports) and view assigned areas; limited admin.
 - User experience: store theme preference per user (`system` default; respects `prefers-color-scheme`).
+ - Tenant types: `internal_msp` (parent) and `customer` (default) share the same feature set; MSP Admins can see all.
 
 ## Security controls (built-in)
 - HTTPS-only; HSTS; CSP; secure cookies.

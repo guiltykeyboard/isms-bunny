@@ -13,6 +13,7 @@ Open-source, MSP-friendly ISMS and trust center that supports ISO 27001:2022 (an
 - Role-based access: MSP admin (all tenants), Tenant CISO (full manage for assigned tenants), Auditor (read-only), Leadership/Manager (can submit records such as minutes, NC reports).
 - Notifications/reminders for reviews (risks, controls, policies), evidence freshness, audit prep.
 - API-first with UI parity; audit logging for all changes.
+- Auth: local login with TOTP MFA and passkeys (WebAuthn); OIDC for Okta/Azure/Google and generic; SAML 2.0 for other IdPs.
 
 ## Non-functional & security requirements
 - Secure by default: HTTPS everywhere, CSP, no default passwords, MFA-ready, rate limiting, audit logs.

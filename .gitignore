@@ -8,3 +8,4 @@ context/
 __pycache__/
 .venv/
 .pytest_cache/
+.ruff_cache/

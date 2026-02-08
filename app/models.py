@@ -12,6 +12,7 @@ class Tenant(Base):
     id: Mapped[str] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     name: Mapped[str] = mapped_column(String, nullable=False)
     fqdn: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    type: Mapped[str] = mapped_column(String, default="customer")
 
 
 class User(Base):

@@ -1,0 +1,14 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-select = ["B", "E", "F", "W", "I"]
+ignore = []
+exclude = [
+    "db/migrations",
+    ".venv",
+    ".ruff_cache",
+]
+
+[tool.ruff.isort]
+combine-as-imports = true
+known-first-party = ["app"]

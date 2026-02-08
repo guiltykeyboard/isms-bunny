@@ -12,6 +12,7 @@
   <img alt="Caddy" src="https://img.shields.io/badge/Caddy-2-2EAD6D">
   <img alt="Docker Compose" src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white">
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-000000">
+  <img alt="Lint" src="https://github.com/guiltykeyboard/isms-bunny/actions/workflows/lint.yml/badge.svg">
 </p>
 
 Open-source, MSP-friendly ISMS and trust center scaffold. Goals:
@@ -19,6 +20,7 @@ Open-source, MSP-friendly ISMS and trust center scaffold. Goals:
 - ISO 27001:2022 first, multi-tenant, security-first.
 - Deployable with docker-compose (Caddy + FastAPI/Next.js + Postgres + Redis + S3-compatible storage).
 - Trust page per tenant with custom domain and automatic TLS.
+- Auth: local (password + TOTP + passkeys) and enterprise (OIDC for Okta/Azure/Google; SAML 2.0 BYO).
 
 ## Getting started (dev)
 
@@ -40,6 +42,9 @@ Dev defaults
 - Seeded tenant: `Dev Tenant` (`fqdn=localhost`, id `00000000-0000-0000-0000-000000000001`).
 - Seeded MSP admin user: `admin@example.com` (id `00000000-0000-0000-0000-000000000002`, theme `system`).
 - Host resolution: requests to `localhost` map to the seeded tenant; replace with real FQDNs in production.
+
+Dev quality checks
+- Ruff lint: `pip install -r requirements-dev.txt` then `ruff check .`
 
 ## Structure
 - `design/` — requirements, architecture, trust page notes, theme.
