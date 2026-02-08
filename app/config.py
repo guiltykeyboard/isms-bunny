@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     environment: str = Field(default="development")
     secret_key: str = Field(default="change-me")
 
+    default_tenant_fqdn: str = Field(default="localhost")
+    default_tenant_id: str | None = Field(default="00000000-0000-0000-0000-000000000001")
+
     database_url: str = Field(default="postgresql+asyncpg://isms:isms@db:5432/isms")
     redis_url: str = Field(default="redis://cache:6379/0")
 

@@ -1,0 +1,22 @@
+<svg width="240" height="240" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ISMS-Bunny logo">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4B2C82"/>
+      <stop offset="100%" stop-color="#6F3CCF"/>
+    </linearGradient>
+  </defs>
+  <rect rx="28" ry="28" width="240" height="240" fill="#0F1116"/>
+  <path d="M72 52c0-16 10-30 22-30s22 14 22 30v28H72V52z" fill="#4B2C82"/>
+  <path d="M124 52c0-16 10-30 22-30s22 14 22 30v28h-44V52z" fill="#6F3CCF"/>
+  <path d="M68 110c0-24 22-44 52-44s52 20 52 44v24c0 28-22 64-52 64s-52-36-52-64v-24z" fill="url(#bg)"/>
+  <path d="M94 116c0 12-10 22-22 22s-22-10-22-22 10-22 22-22 22 10 22 22z" fill="#1A1D24"/>
+  <path d="M190 116c0 12-10 22-22 22s-22-10-22-22 10-22 22-22 22 10 22 22z" fill="#1A1D24"/>
+  <path d="M94 150c12 10 24 14 32 14s20-4 32-14l-8 22c-7 18-17 28-24 28s-17-10-24-28l-8-22z" fill="#F4F5FB" opacity="0.9"/>
+  <path d="M120 92c-10 0-18 6-18 14 0 8 8 14 18 14s18-6 18-14c0-8-8-14-18-14z" fill="#F4F5FB"/>
+  <path d="M110 124h20v8c0 6-4 10-10 10s-10-4-10-10v-8z" fill="#1A1D24"/>
+  <path d="M120 146c14 0 26-10 26-22 0-4-1-8-3-11l-9 4c1 2 2 4 2 7 0 8-7 14-16 14s-16-6-16-14c0-3 1-5 2-7l-9-4c-2 3-3 7-3 11 0 12 12 22 26 22z" fill="#F4F5FB" opacity="0.6"/>
+  <path d="M120 170l32-18v20c0 18-14 34-32 34s-32-16-32-34v-20l32 18z" fill="#0F1116" opacity="0.9"/>
+  <path d="M120 182c4 0 8 3 8 8s-4 8-8 8-8-3-8-8 4-8 8-8z" fill="#6F3CCF"/>
+  <rect x="98" y="182" width="44" height="6" rx="3" fill="#F4F5FB" opacity="0.8"/>
+  <text x="120" y="215" font-family="Arial, sans-serif" font-size="20" text-anchor="middle" fill="#F4F5FB">ISMS-BUNNY</text>
+</svg>

@@ -9,5 +9,8 @@ psql "${DB_URL}" -f db/migrations/001_init.sql
 if [ -f db/migrations/002_user_theme_pref.sql ]; then
   psql "${DB_URL}" -f db/migrations/002_user_theme_pref.sql
 fi
+if [ -f db/migrations/003_seed_dev.sql ]; then
+  psql "${DB_URL}" -f db/migrations/003_seed_dev.sql
+fi
 
 echo "Migrations applied."
