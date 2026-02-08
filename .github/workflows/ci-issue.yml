@@ -21,8 +21,9 @@ jobs:
             const run = context.payload.workflow_run;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const label = "ci:lint";
-            const title = `[CI] Lint workflow ${run.conclusion === 'failure' ? 'failed' : 'fixed'} on ${run.head_branch || run.display_title}`;
+            const wfName = run.name || workflow.name || run.display_title || \"ci\";
+            const label = wfName.includes('loc') ? \"ci:loc\" : \"ci:lint\";
+            const title = `[CI] ${wfName} ${run.conclusion === 'failure' ? 'failed' : 'fixed'} on ${run.head_branch || run.display_title}`;
 
             // Ensure label exists
             try {
