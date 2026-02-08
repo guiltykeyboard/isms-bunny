@@ -2,8 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import insert, select
-from sqlalchemy import update as sql_update
+from sqlalchemy import insert, select, update as sql_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.authz import assert_tenant_access, enforce_current_tenant, require_msp_admin

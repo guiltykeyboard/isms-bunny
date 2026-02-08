@@ -61,9 +61,15 @@ def build_storage_client(
     cfg = StorageConfig(
         bucket=tenant_storage.get("bucket", default_bucket) if tenant_storage else default_bucket,
         region=tenant_storage.get("region", default_region) if tenant_storage else default_region,
-        endpoint=tenant_storage.get("endpoint", default_endpoint) if tenant_storage else default_endpoint,
-        access_key=tenant_storage.get("access_key") if tenant_storage else default_access_key,
-        secret_key=tenant_storage.get("secret_key") if tenant_storage else default_secret,
+        endpoint=tenant_storage.get("endpoint", default_endpoint)
+        if tenant_storage
+        else default_endpoint,
+        access_key=tenant_storage.get("access_key")
+        if tenant_storage
+        else default_access_key,
+        secret_key=tenant_storage.get("secret_key")
+        if tenant_storage
+        else default_secret,
         prefix=tenant_prefix,
     )
     return StorageClient(cfg)

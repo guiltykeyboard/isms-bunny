@@ -4,14 +4,14 @@ from uuid import UUID
 
 import pyotp
 from argon2 import PasswordHasher
-from webauthn import verify_registration_response, verify_authentication_response
-from webauthn.helpers.structs import (
-    PublicKeyCredentialCreationOptions,
-    RegistrationCredential,
-    AuthenticationCredential,
-    PublicKeyCredentialRequestOptions,
-)
 from jose import jwt
+from webauthn import verify_authentication_response, verify_registration_response
+from webauthn.helpers.structs import (
+    AuthenticationCredential,
+    PublicKeyCredentialCreationOptions,
+    PublicKeyCredentialRequestOptions,
+    RegistrationCredential,
+)
 
 from app.config import get_settings
 
@@ -63,7 +63,9 @@ def decode_access_token(token: str) -> Optional[UUID]:
 
 
 # WebAuthn helpers (minimal stubs)
-def build_webauthn_registration_options(user_id: UUID, username: str) -> PublicKeyCredentialCreationOptions:
+def build_webauthn_registration_options(
+    user_id: UUID, username: str
+) -> PublicKeyCredentialCreationOptions:
     return PublicKeyCredentialCreationOptions(
         rp={"id": RP_ID, "name": RP_NAME},
         user={
@@ -85,7 +87,9 @@ def verify_webauthn_registration(credential: RegistrationCredential, expected_ch
     )
 
 
-def build_webauthn_authentication_options(credential_id: bytes) -> PublicKeyCredentialRequestOptions:
+def build_webauthn_authentication_options(
+    credential_id: bytes,
+) -> PublicKeyCredentialRequestOptions:
     return PublicKeyCredentialRequestOptions(
         challenge=pyotp.random_base32().encode(),
         rp_id=RP_ID,
@@ -94,13 +98,16 @@ def build_webauthn_authentication_options(credential_id: bytes) -> PublicKeyCred
 
 
 def verify_webauthn_authentication(
-    credential: AuthenticationCredential, expected_challenge: bytes, stored_public_key: bytes
+    credential: AuthenticationCredential,
+    expected_challenge: bytes,
+    stored_public_key: bytes,
 ):
+    origin = f"https://{RP_ID}"
     return verify_authentication_response(
         credential=credential,
         expected_challenge=expected_challenge,
         expected_rp_id=RP_ID,
-        expected_origin=f"https://{RP_ID}",
+        expected_origin=origin,
         credential_public_key=stored_public_key,
         credential_current_sign_count=0,
     )
