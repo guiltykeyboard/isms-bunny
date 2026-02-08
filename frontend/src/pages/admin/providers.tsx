@@ -20,7 +20,9 @@ const emptyProvider = (type: "oidc" | "saml"): Provider => ({
 });
 
 export default function ProvidersPage() {
-  const [mode, setMode] = useState<ThemeMode>(getInitialMode());
+  const [mode, setMode] = useState<ThemeMode>(() =>
+    typeof window === "undefined" ? "dark" : getInitialMode(),
+  );
   const colors = palette[resolveMode(mode)];
   const [oidc, setOidc] = useState<Provider[]>([]);
   const [saml, setSaml] = useState<Provider[]>([]);

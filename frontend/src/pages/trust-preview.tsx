@@ -1,10 +1,13 @@
 import useSWR from "swr";
+import { useState } from "react";
 import { apiFetch } from "../lib/api";
 import { palette, ThemeMode, getInitialMode, resolveMode } from "../styles/theme";
 import { TrustCard } from "../components/TrustCard";
 
 export default function TrustPreview() {
-  const [mode] = useState<ThemeMode>(getInitialMode());
+  const [mode] = useState<ThemeMode>(() =>
+    typeof window === "undefined" ? "dark" : getInitialMode(),
+  );
   const resolved = resolveMode(mode);
   const colors = palette[resolved];
 

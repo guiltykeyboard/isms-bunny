@@ -20,7 +20,9 @@ export default function Setup() {
   const [status, setStatus] = useState<string | null>(null);
   const [oidcConfig, setOidcConfig] = useState("[]");
   const [samlConfig, setSamlConfig] = useState("[]");
-  const [mode, setMode] = useState<ThemeMode>(getInitialMode());
+  const [mode, setMode] = useState<ThemeMode>(() =>
+    typeof window === "undefined" ? "dark" : getInitialMode(),
+  );
   const resolved = resolveMode(mode);
   const colors = palette[resolved];
 

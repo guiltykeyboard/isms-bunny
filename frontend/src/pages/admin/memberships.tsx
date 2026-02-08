@@ -5,7 +5,9 @@ import { palette, resolveMode, getInitialMode, ThemeMode } from "../../styles/th
 import { TableCard } from "../../components/TableCard";
 
 export default function MembershipsPage() {
-  const [mode] = useState<ThemeMode>(getInitialMode());
+  const [mode] = useState<ThemeMode>(() =>
+    typeof window === "undefined" ? "dark" : getInitialMode(),
+  );
   const colors = palette[resolveMode(mode)];
   const { data, mutate } = useSWR("/memberships", apiFetch);
   const [form, setForm] = useState({ user_id: "", tenant_id: "", roles: "tenant_ciso" });

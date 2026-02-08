@@ -9,7 +9,9 @@ interface Credential {
 }
 
 export default function WebAuthnAdmin() {
-  const [mode] = useState<ThemeMode>(getInitialMode());
+  const [mode] = useState<ThemeMode>(() =>
+    typeof window === "undefined" ? "dark" : getInitialMode(),
+  );
   const colors = palette[resolveMode(mode)];
   const [creds, setCreds] = useState<Credential[]>([]);
   const [status, setStatus] = useState<string | null>(null);

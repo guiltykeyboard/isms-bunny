@@ -3,7 +3,9 @@ import { apiFetch } from "../lib/api";
 import { palette, resolveMode, getInitialMode, ThemeMode } from "../styles/theme";
 
 export default function Profile() {
-  const [mode] = useState<ThemeMode>(getInitialMode());
+  const [mode] = useState<ThemeMode>(() =>
+    typeof window === "undefined" ? "dark" : getInitialMode(),
+  );
   const colors = palette[resolveMode(mode)];
   const [email, setEmail] = useState("");
   const [creds, setCreds] = useState<any[]>([]);
