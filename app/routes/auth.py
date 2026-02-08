@@ -6,11 +6,12 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 from jwt import PyJWKClient
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import auth_utils
 from app.config import get_settings
+from app.context import current_tenant
 from app.db import get_session
 from app.models import User
 from app.tokens import create_refresh_token, decode_refresh_token
@@ -30,6 +31,15 @@ async def login(
     payload: dict,
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
+    tenant_id = current_tenant()
+    if tenant_id:
+        allow = await session.execute(
+            "SELECT allow_local_login FROM tenants WHERE id=:tid",
+            {"tid": tenant_id},
+        )
+        row = allow.fetchone()
+        if row and row[0] is False:
+            raise HTTPException(status_code=403, detail="Local login disabled for this tenant")
     email = (payload.get("email") or "").lower().strip()
     password = payload.get("password")
     totp_code = payload.get("totp_code")
@@ -252,11 +262,17 @@ async def saml_acs(
     auth.process_response()
     errors = auth.get_errors()
     if errors:
+        await _log_saml(
+            session, cfg.get("tenant_id"), "error", "SAML ACS error", {"errors": errors}
+        )
         raise HTTPException(status_code=400, detail=f"SAML error: {errors}")
     email = auth.get_nameid() or auth.get_attribute("email") or auth.get_attribute("mail")
     if isinstance(email, list):
         email = email[0]
     if not email:
+        await _log_saml(
+            session, cfg.get("tenant_id"), "error", "SAML assertion missing email", {}
+        )
         raise HTTPException(status_code=400, detail="email not found in assertion")
     user = await get_user_by_email(session, str(email).lower())
     if not user:
@@ -284,6 +300,9 @@ async def saml_acs(
     refresh = create_refresh_token(user.id)
     auth_utils.set_auth_cookies(response, token, refresh)
     await session.commit()
+    await _log_saml(
+        session, cfg.get("tenant_id"), "info", "SAML login success", {"email": str(email)}
+    )
     return {"access_token": token, "refresh_token": refresh, "token_type": "bearer"}
 
 
@@ -386,3 +405,18 @@ def _build_saml_auth(cfg: dict, request: Request, post_data: dict | None = None)
 
     req_data = _saml_request_data(request, post_data or {})
     return OneLogin_Saml2_Auth(req_data, old_settings=_build_saml_settings(cfg, request))
+
+
+async def _log_saml(session: AsyncSession, tenant_id, level: str, message: str, details: dict):
+    if not tenant_id:
+        return
+    await session.execute(
+        text(
+            """
+            INSERT INTO saml_logs (tenant_id, level, message, details)
+            VALUES (:tid, :lvl, :msg, :det)
+            """
+        ),
+        {"tid": tenant_id, "lvl": level, "msg": message, "det": details or {}},
+    )
+    await session.commit()

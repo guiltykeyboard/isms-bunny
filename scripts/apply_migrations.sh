@@ -27,5 +27,11 @@ fi
 if [ -f db/migrations/003_seed_dev.sql ]; then
   psql "${DB_URL}" -f db/migrations/003_seed_dev.sql
 fi
+if [ -f db/migrations/009_idp_roles.sql ]; then
+  psql "${DB_URL}" -f db/migrations/009_idp_roles.sql
+fi
+if [ -f db/migrations/010_saml_logs.sql ]; then
+  psql "${DB_URL}" -f db/migrations/010_saml_logs.sql
+fi
 
 echo "Migrations applied."
