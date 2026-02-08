@@ -26,6 +26,10 @@ class User(Base):
     is_msp_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     status: Mapped[str] = mapped_column(String, default="active")
     theme_preference: Mapped[str] = mapped_column(String, default="system")
+    auth_preference: Mapped[str] = mapped_column(
+        String, default="external"
+    )  # external|local|either
+    allow_local_fallback: Mapped[bool] = mapped_column(Boolean, default=False)
 
     memberships: Mapped[list["Membership"]] = relationship("Membership", back_populates="user")
 

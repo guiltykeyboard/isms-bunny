@@ -32,6 +32,7 @@ async def login(
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
     tenant_id = current_tenant()
+    idp_configured = False
     if tenant_id:
         allow = await session.execute(
             "SELECT allow_local_login FROM tenants WHERE id=:tid",
@@ -40,6 +41,11 @@ async def login(
         row = allow.fetchone()
         if row and row[0] is False:
             raise HTTPException(status_code=403, detail="Local login disabled for this tenant")
+        idp = await session.execute(
+            "SELECT count(*) FROM idp_connections WHERE tenant_id=:tid AND enabled=true",
+            {"tid": tenant_id},
+        )
+        idp_configured = (idp.scalar() or 0) > 0
     email = (payload.get("email") or "").lower().strip()
     password = payload.get("password")
     totp_code = payload.get("totp_code")
@@ -50,6 +56,8 @@ async def login(
     user = await get_user_by_email(session, email)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    if idp_configured and user.auth_preference == "external" and not user.allow_local_fallback:
+        raise HTTPException(status_code=403, detail="Use single sign-on for this account")
 
     cred = await session.execute(
         """

@@ -33,5 +33,8 @@ fi
 if [ -f db/migrations/010_saml_logs.sql ]; then
   psql "${DB_URL}" -f db/migrations/010_saml_logs.sql
 fi
+if [ -f db/migrations/011_auth_pref.sql ]; then
+  psql "${DB_URL}" -f db/migrations/011_auth_pref.sql
+fi
 
 echo "Migrations applied."
