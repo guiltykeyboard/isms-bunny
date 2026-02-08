@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import insert, select
+from sqlalchemy import update as sql_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.authz import assert_tenant_access, enforce_current_tenant, require_msp_admin
@@ -63,3 +64,44 @@ async def get_tenant(
     if not t:
         raise HTTPException(status_code=404, detail="Tenant not found")
     return {"id": str(t.id), "name": t.name, "fqdn": t.fqdn, "type": t.type}
+
+
+@router.patch("/{tenant_id}")
+async def update_tenant(
+    tenant_id: UUID,
+    payload: dict,
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    require_msp_admin(user.is_msp_admin)
+    stmt = (
+        sql_update(Tenant)
+        .where(Tenant.id == tenant_id)
+        .values(
+            name=payload.get("name"),
+            fqdn=payload.get("fqdn"),
+            type=payload.get("type", "customer"),
+        )
+        .returning(Tenant)
+    )
+    result = await session.execute(stmt)
+    t = result.scalar_one_or_none()
+    if not t:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    await session.commit()
+    return {"id": str(t.id), "name": t.name, "fqdn": t.fqdn, "type": t.type}
+
+
+@router.delete("/{tenant_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_tenant(
+    tenant_id: UUID,
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    require_msp_admin(user.is_msp_admin)
+    await session.execute(
+        "DELETE FROM tenants WHERE id = :tid",
+        {"tid": tenant_id},
+    )
+    await session.commit()
+    return {}

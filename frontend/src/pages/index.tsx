@@ -1,0 +1,79 @@
+import { useEffect, useState } from "react";
+import { palette, ThemeMode } from "../styles/theme";
+
+export default function Home({
+  themeMode,
+  setThemeMode,
+  resolvedTheme,
+}: {
+  themeMode: ThemeMode;
+  setThemeMode: (m: ThemeMode) => void;
+  resolvedTheme: "light" | "dark";
+}) {
+  const colors = palette[resolvedTheme];
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/ping")
+      .then((r) => r.json())
+      .then((d) => setToken(d.status))
+      .catch(() => setToken(null));
+  }, []);
+
+  return (
+    <div
+      style={{
+        background: colors.background,
+        color: colors.text,
+        minHeight: "100vh",
+        padding: "2rem",
+        fontFamily: "Inter, system-ui, -apple-system, sans-serif",
+      }}
+    >
+      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <h1 style={{ margin: 0 }}>ISMS-Bunny</h1>
+          <p style={{ color: colors.muted, marginTop: "0.25rem" }}>
+            MSP-friendly ISMS & Trust Center (alpha scaffold)
+          </p>
+        </div>
+        <select
+          value={themeMode}
+          onChange={(e) => setThemeMode(e.target.value as ThemeMode)}
+          style={{ padding: "0.5rem", background: colors.surface, color: colors.text }}
+        >
+          <option value="system">System</option>
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+      </header>
+
+      <main style={{ marginTop: "2rem", display: "grid", gap: "1rem" }}>
+        <section style={{ background: colors.surface, padding: "1.25rem", borderRadius: "12px" }}>
+          <h2 style={{ marginTop: 0 }}>Trust Page</h2>
+          <p style={{ color: colors.muted }}>
+            Custom domains via SNI (Caddy) will render tenant-specific trust content with signed
+            URLs for gated docs.
+          </p>
+          <button
+            style={{
+              background: colors.primary,
+              color: colors.text,
+              border: "none",
+              padding: "0.6rem 1.2rem",
+              borderRadius: "10px",
+              cursor: "pointer",
+            }}
+          >
+            Preview (coming soon)
+          </button>
+        </section>
+        <section style={{ background: colors.surface, padding: "1.25rem", borderRadius: "12px" }}>
+          <h2 style={{ marginTop: 0 }}>Status</h2>
+          <p>API ping: {token ?? "…"}</p>
+          <p>Resolved theme: {resolvedTheme}</p>
+        </section>
+      </main>
+    </div>
+  );
+}

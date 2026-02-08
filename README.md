@@ -32,7 +32,7 @@ Open-source, MSP-friendly ISMS and trust center scaffold. Goals:
 3. Migrations: apply `db/migrations/001_init.sql` to the Postgres instance.
    - For local dev you can run `scripts/apply_migrations.sh` (uses `DATABASE_URL` if set).
 4. Open `http://localhost:8000/health` for a quick check.
-5. Dev auth stub: send headers `X-User-Id: <uuid>` and optional `X-Is-Msp-Admin: true` to hit protected endpoints. Real auth to be added later.
+5. Auth (alpha): local login via `POST /auth/login` (email/password, optional `totp_code`) sets an httpOnly `access_token` cookie and returns a bearer token. Logout via `POST /auth/logout`. Dev headers `X-User-Id` / `X-Is-Msp-Admin` still work for local testing. OIDC/SAML endpoints stubbed for Okta/Azure/Google/BYO.
 
 Theme preference
 - Modes: `system` (default, honors browser `prefers-color-scheme`), `dark`, `light`.
@@ -51,6 +51,10 @@ Auth (early stub)
 Dev quality checks
 - Ruff lint: `pip install -r requirements-dev.txt` then `ruff check .`
 - CI lint workflow auto-creates/updates an issue (label `ci:lint`) on failures and auto-closes when passing.
+
+Frontend
+- Minimal Next.js scaffold in `frontend/` with light/dark/system toggle and trust-page teaser.
+- Run with `npm install` then `npm run dev` inside `frontend/`.
 
 ## Structure
 - `design/` — requirements, architecture, trust page notes, theme.

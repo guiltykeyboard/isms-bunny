@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     s3_access_key_id: str = Field(default="changeme")
     s3_secret_access_key: str = Field(default="changeme")
 
+    oidc_allowed_providers: list[str] = Field(default_factory=lambda: ["okta", "azure", "google"])
+    saml_enabled: bool = Field(default=True)
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

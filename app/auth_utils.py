@@ -4,12 +4,23 @@ from uuid import UUID
 
 import pyotp
 from argon2 import PasswordHasher
+from webauthn import verify_registration_response, verify_authentication_response
+from webauthn.helpers.structs import (
+    PublicKeyCredentialCreationOptions,
+    RegistrationCredential,
+    AuthenticationCredential,
+    PublicKeyCredentialRequestOptions,
+)
 from jose import jwt
 
 from app.config import get_settings
 
 settings = get_settings()
 ph = PasswordHasher()
+
+# WebAuthn relying party defaults
+RP_ID = "localhost"
+RP_NAME = "ISMS-Bunny"
 
 
 def hash_password(password: str) -> str:
@@ -49,3 +60,47 @@ def decode_access_token(token: str) -> Optional[UUID]:
         return UUID(sub) if sub else None
     except Exception:
         return None
+
+
+# WebAuthn helpers (minimal stubs)
+def build_webauthn_registration_options(user_id: UUID, username: str) -> PublicKeyCredentialCreationOptions:
+    return PublicKeyCredentialCreationOptions(
+        rp={"id": RP_ID, "name": RP_NAME},
+        user={
+            "id": str(user_id).encode(),
+            "name": username,
+            "displayName": username,
+        },
+        challenge=pyotp.random_base32().encode(),
+        pub_key_cred_params=[{"type": "public-key", "alg": -7}],
+    )
+
+
+def verify_webauthn_registration(credential: RegistrationCredential, expected_challenge: bytes):
+    return verify_registration_response(
+        credential=credential,
+        expected_challenge=expected_challenge,
+        expected_origin=f"https://{RP_ID}",
+        expected_rp_id=RP_ID,
+    )
+
+
+def build_webauthn_authentication_options(credential_id: bytes) -> PublicKeyCredentialRequestOptions:
+    return PublicKeyCredentialRequestOptions(
+        challenge=pyotp.random_base32().encode(),
+        rp_id=RP_ID,
+        allow_credentials=[{"type": "public-key", "id": credential_id}],
+    )
+
+
+def verify_webauthn_authentication(
+    credential: AuthenticationCredential, expected_challenge: bytes, stored_public_key: bytes
+):
+    return verify_authentication_response(
+        credential=credential,
+        expected_challenge=expected_challenge,
+        expected_rp_id=RP_ID,
+        expected_origin=f"https://{RP_ID}",
+        credential_public_key=stored_public_key,
+        credential_current_sign_count=0,
+    )

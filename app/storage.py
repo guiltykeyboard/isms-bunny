@@ -47,3 +47,23 @@ class StorageClient:
 
     async def _head_bucket(self):
         return self.client.head_bucket(Bucket=self.config.bucket)
+
+
+def build_storage_client(
+    tenant_storage: Optional[dict],
+    default_bucket: str,
+    default_region: str,
+    default_endpoint: Optional[str],
+    default_access_key: Optional[str],
+    default_secret: Optional[str],
+    tenant_prefix: Optional[str],
+) -> StorageClient:
+    cfg = StorageConfig(
+        bucket=tenant_storage.get("bucket", default_bucket) if tenant_storage else default_bucket,
+        region=tenant_storage.get("region", default_region) if tenant_storage else default_region,
+        endpoint=tenant_storage.get("endpoint", default_endpoint) if tenant_storage else default_endpoint,
+        access_key=tenant_storage.get("access_key") if tenant_storage else default_access_key,
+        secret_key=tenant_storage.get("secret_key") if tenant_storage else default_secret,
+        prefix=tenant_prefix,
+    )
+    return StorageClient(cfg)

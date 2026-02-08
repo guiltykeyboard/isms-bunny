@@ -70,3 +70,21 @@ async def login(
 async def logout(response: Response):
     response.delete_cookie(settings.cookie_name)
     return {"detail": "logged out"}
+
+
+# OIDC / SAML placeholders
+@router.get("/oidc/{provider}/start")
+async def oidc_start(provider: str):
+    if provider not in settings.oidc_allowed_providers:
+        raise HTTPException(status_code=404, detail="Provider not enabled")
+    return {"detail": f"OIDC start for {provider}", "status": "not_implemented"}
+
+
+@router.get("/oidc/{provider}/callback")
+async def oidc_callback(provider: str):
+    return {"detail": f"OIDC callback for {provider}", "status": "not_implemented"}
+
+
+@router.get("/saml/metadata")
+async def saml_metadata():
+    return {"detail": "SAML metadata stub"}
