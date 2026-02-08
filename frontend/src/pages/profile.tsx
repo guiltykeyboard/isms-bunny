@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiFetch } from "../lib/api";
 import { palette, resolveMode, getInitialMode, ThemeMode } from "../styles/theme";
 
@@ -6,7 +6,17 @@ export default function Profile() {
   const [mode] = useState<ThemeMode>(getInitialMode());
   const colors = palette[resolveMode(mode)];
   const [email, setEmail] = useState("");
+  const [creds, setCreds] = useState<any[]>([]);
   const [status, setStatus] = useState<string | null>(null);
+
+  const loadCreds = async () => {
+    try {
+      const data = await apiFetch("/webauthn/credentials/me");
+      setCreds(data);
+    } catch (e: any) {
+      setStatus(e.message);
+    }
+  };
 
   const registerPasskey = async () => {
     setStatus("Starting passkey registration…");
@@ -41,10 +51,20 @@ export default function Profile() {
         body: JSON.stringify(payload),
       });
       setStatus("Passkey registered.");
+      loadCreds();
     } catch (err: any) {
       setStatus(err.message || "Failed to register passkey");
     }
   };
+
+  const deleteCred = async (id: string) => {
+    await apiFetch(`/webauthn/credentials/me/${id}`, { method: "DELETE" });
+    loadCreds();
+  };
+
+  useEffect(() => {
+    loadCreds();
+  }, []);
 
   return (
     <div style={{ padding: "2rem", background: colors.background, color: colors.text, minHeight: "100vh" }}>
@@ -55,6 +75,24 @@ export default function Profile() {
           Register Passkey
         </button>
       </div>
+      {creds.length > 0 && (
+        <div style={{ marginTop: "1.5rem" }}>
+          <h3>My Passkeys</h3>
+          <ul style={{ paddingLeft: "1rem" }}>
+            {creds.map((c) => (
+              <li key={c.id} style={{ marginBottom: "0.4rem" }}>
+                {c.nickname || "Passkey"} — sign count {c.sign_count ?? 0}
+                <button
+                  style={{ marginLeft: "0.6rem", ...btn(colors), padding: "0.3rem 0.6rem" }}
+                  onClick={() => deleteCred(c.id)}
+                >
+                  Delete
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {status && <p style={{ marginTop: "0.75rem", color: colors.muted }}>{status}</p>}
     </div>
   );

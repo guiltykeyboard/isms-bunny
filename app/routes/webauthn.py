@@ -12,6 +12,7 @@ from app.auth_utils import (
     verify_webauthn_authentication,
     verify_webauthn_registration,
 )
+from app.authz import require_msp_admin
 from app.db import get_session
 from app.deps import get_current_user_jwt
 from app.settings_store import get_setting, set_setting
@@ -22,6 +23,12 @@ router = APIRouter(prefix="/webauthn", tags=["webauthn"])
 def _b64decode_bytes(value: str) -> bytes:
     padding = "=" * (-len(value) % 4)
     return urlsafe_b64decode(value + padding)
+
+
+def _b64encode_bytes(data: bytes) -> str:
+    import base64
+
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
 
 
 @router.post("/register/options")
@@ -176,3 +183,94 @@ async def login_verify(
     )
     await session.commit()
     return {"detail": "webauthn ok", "user_id": user_id}
+
+
+@router.get("/credentials/me")
+async def list_my_credentials(
+    user: Annotated[object, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    rows = await session.execute(
+        text(
+            """
+            SELECT credential_id, nickname, sign_count, created_at
+            FROM webauthn_credentials
+            WHERE user_id = :uid
+            ORDER BY created_at DESC
+            """
+        ),
+        {"uid": user.id},
+    )
+    creds = [
+        {
+            "id": _b64encode_bytes(r.credential_id),
+            "nickname": r.nickname,
+            "sign_count": r.sign_count,
+            "created_at": r.created_at,
+        }
+        for r in rows.fetchall()
+    ]
+    return creds
+
+
+@router.delete("/credentials/me/{cred_id}")
+async def delete_my_credential(
+    cred_id: str,
+    user: Annotated[object, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    await session.execute(
+        text(
+            "DELETE FROM webauthn_credentials WHERE credential_id=:cid AND user_id=:uid"
+        ),
+        {"cid": _b64decode_bytes(cred_id), "uid": user.id},
+    )
+    await session.commit()
+    return {"detail": "deleted"}
+
+
+@router.get("/credentials/user/{user_id}")
+async def admin_list_credentials(
+    user_id: UUID,
+    user: Annotated[object, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    require_msp_admin(user.is_msp_admin)
+    rows = await session.execute(
+        text(
+            """
+            SELECT credential_id, nickname, sign_count, created_at
+            FROM webauthn_credentials
+            WHERE user_id = :uid
+            ORDER BY created_at DESC
+            """
+        ),
+        {"uid": user_id},
+    )
+    return [
+        {
+            "id": _b64encode_bytes(r.credential_id),
+            "nickname": r.nickname,
+            "sign_count": r.sign_count,
+            "created_at": r.created_at,
+        }
+        for r in rows.fetchall()
+    ]
+
+
+@router.delete("/credentials/user/{user_id}/{cred_id}")
+async def admin_delete_credential(
+    user_id: UUID,
+    cred_id: str,
+    user: Annotated[object, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    require_msp_admin(user.is_msp_admin)
+    await session.execute(
+        text(
+            "DELETE FROM webauthn_credentials WHERE credential_id=:cid AND user_id=:uid"
+        ),
+        {"cid": _b64decode_bytes(cred_id), "uid": user_id},
+    )
+    await session.commit()
+    return {"detail": "deleted"}
