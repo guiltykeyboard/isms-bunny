@@ -35,3 +35,17 @@ def test_build_storage_byo():
     )
     assert client.config.bucket == "custom"
     assert client.config.prefix == "tenant-123"
+
+
+def test_build_storage_msp_internal_prefix():
+    client = build_storage_client(
+        tenant_storage={"use_msp_storage": True},
+        default_bucket="msp-bucket",
+        default_region="us-east-1",
+        default_endpoint=None,
+        default_access_key="AKIA",
+        default_secret="SECRET",
+        tenant_prefix="msp-tenant",
+        tenant_type="internal_msp",
+    )
+    assert client.config.prefix == "msp/msp-tenant"
