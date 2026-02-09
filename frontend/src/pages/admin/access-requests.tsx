@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
-import { getInitialMode, palette, resolveMode, ThemeMode } from "../../styles/theme";
+import {
+  getInitialMode,
+  palette,
+  resolveMode,
+  ThemeMode,
+} from "../../styles/theme";
 
 type RequestRow = {
   id: string;
@@ -47,19 +52,32 @@ export default function AccessRequests() {
   };
 
   const updateRow = (id: string, updates: Partial<RequestRow>) => {
-    setRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...updates } : row)));
+    setRows((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, ...updates } : row)),
+    );
   };
 
   useEffect(() => {
     load();
   }, []);
 
-  const filtered = rows.filter((r) => (filters.status === "all" ? true : r.status === filters.status));
+  const filtered = rows.filter((r) =>
+    filters.status === "all" ? true : r.status === filters.status,
+  );
 
   return (
-    <div style={{ padding: "2rem", minHeight: "100vh", background: colors.background, color: colors.text }}>
+    <div
+      style={{
+        padding: "2rem",
+        minHeight: "100vh",
+        background: colors.background,
+        color: colors.text,
+      }}
+    >
       <h1>Trust Access Requests</h1>
-      <p style={{ color: colors.muted }}>View public users requesting gated documents.</p>
+      <p style={{ color: colors.muted }}>
+        View public users requesting gated documents.
+      </p>
       {status && <p style={{ color: colors.muted }}>{status}</p>}
       <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
         <label style={{ color: colors.muted }}>Filter</label>
@@ -76,14 +94,30 @@ export default function AccessRequests() {
       </div>
       <div style={{ marginTop: "1rem", display: "grid", gap: "0.75rem" }}>
         {filtered.map((r) => (
-          <div key={r.id} style={{ background: colors.surface, padding: "0.75rem", borderRadius: 10 }}>
-            <div style={{ fontWeight: 600 }}>{r.name} ({r.company})</div>
+          <div
+            key={r.id}
+            style={{
+              background: colors.surface,
+              padding: "0.75rem",
+              borderRadius: 10,
+            }}
+          >
+            <div style={{ fontWeight: 600 }}>
+              {r.name} ({r.company})
+            </div>
             <div style={{ color: colors.muted }}>{r.email}</div>
             <div style={{ marginTop: "0.3rem" }}>{r.justification}</div>
             <div style={{ color: colors.muted, marginTop: "0.3rem" }}>
               Status: {r.status} • {new Date(r.created_at).toLocaleString()}
             </div>
-            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: "0.5rem",
+                marginTop: "0.5rem",
+                flexWrap: "wrap",
+              }}
+            >
               <select
                 value={r.status}
                 onChange={(e) => updateRow(r.id, { status: e.target.value })}
@@ -101,6 +135,24 @@ export default function AccessRequests() {
               />
               <button style={btn(colors)} onClick={() => save(r)}>
                 Save
+              </button>
+              <button
+                style={btn(colors)}
+                onClick={() => {
+                  updateRow(r.id, { status: "approved" });
+                  save({ ...r, status: "approved" });
+                }}
+              >
+                Approve
+              </button>
+              <button
+                style={btn(colors)}
+                onClick={() => {
+                  updateRow(r.id, { status: "denied" });
+                  save({ ...r, status: "denied" });
+                }}
+              >
+                Deny
               </button>
             </div>
           </div>
