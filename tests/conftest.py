@@ -13,7 +13,7 @@ def client():
     """Synchronous TestClient with tenancy header preset to localhost."""
     settings = get_settings()
     headers = {"host": settings.default_tenant_fqdn or "localhost"}
-    return TestClient(app, headers=headers)
+    return TestClient(app, headers=headers, raise_server_exceptions=False)
 
 
 @pytest.fixture()

@@ -39,6 +39,12 @@ def generate_totp_secret() -> str:
     return pyotp.random_base32()
 
 
+def get_totp_now(secret: str) -> str:
+    """Return the current TOTP code for the given secret."""
+    totp = pyotp.TOTP(secret)
+    return totp.now()
+
+
 def verify_totp(secret: str, code: str) -> bool:
     totp = pyotp.TOTP(secret)
     try:
