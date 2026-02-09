@@ -1,7 +1,12 @@
 import useSWR from "swr";
 import { useState } from "react";
 import { apiFetch } from "../../lib/api";
-import { palette, resolveMode, getInitialMode, ThemeMode } from "../../styles/theme";
+import {
+  palette,
+  resolveMode,
+  getInitialMode,
+  ThemeMode,
+} from "../../styles/theme";
 import { TableCard } from "../../components/TableCard";
 
 export default function MembershipsPage() {
@@ -10,32 +15,90 @@ export default function MembershipsPage() {
   );
   const colors = palette[resolveMode(mode)];
   const { data, mutate } = useSWR("/memberships", apiFetch);
-  const [form, setForm] = useState({ user_id: "", tenant_id: "", roles: "tenant_ciso" });
+  const [form, setForm] = useState({
+    user_id: "",
+    tenant_id: "",
+    roles: "tenant_ciso",
+  });
+  const roleOptions = [
+    "msp_admin",
+    "sub_msp_admin",
+    "tenant_ciso",
+    "manager",
+    "auditor",
+    "viewer",
+  ];
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     await apiFetch("/memberships", {
       method: "POST",
-      body: JSON.stringify({ ...form, roles: form.roles.split(",").map((r) => r.trim()) }),
+      body: JSON.stringify({
+        ...form,
+        roles: form.roles.split(",").map((r) => r.trim()),
+      }),
     });
     mutate();
   };
 
   return (
-    <div style={{ padding: "2rem", background: colors.background, minHeight: "100vh", color: colors.text }}>
+    <div
+      style={{
+        padding: "2rem",
+        background: colors.background,
+        minHeight: "100vh",
+        color: colors.text,
+      }}
+    >
       <h1>Memberships</h1>
-      <form onSubmit={submit} style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-        <input style={inp(colors)} placeholder="User ID" value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })} />
-        <input style={inp(colors)} placeholder="Tenant ID" value={form.tenant_id} onChange={(e) => setForm({ ...form, tenant_id: e.target.value })} />
-        <input style={inp(colors)} placeholder="roles (comma)" value={form.roles} onChange={(e) => setForm({ ...form, roles: e.target.value })} />
-        <button style={btn(colors)} type="submit">Upsert</button>
+      <form
+        onSubmit={submit}
+        style={{
+          display: "flex",
+          gap: "0.5rem",
+          marginBottom: "1rem",
+          flexWrap: "wrap",
+        }}
+      >
+        <input
+          style={inp(colors)}
+          placeholder="User ID"
+          value={form.user_id}
+          onChange={(e) => setForm({ ...form, user_id: e.target.value })}
+        />
+        <input
+          style={inp(colors)}
+          placeholder="Tenant ID"
+          value={form.tenant_id}
+          onChange={(e) => setForm({ ...form, tenant_id: e.target.value })}
+        />
+        <select
+          style={inp(colors)}
+          value={form.roles}
+          onChange={(e) => setForm({ ...form, roles: e.target.value })}
+        >
+          {roleOptions.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+        <button style={btn(colors)} type="submit">
+          Upsert
+        </button>
       </form>
 
       <TableCard
         title="Existing"
         colors={colors}
         columns={["User", "Tenant", "Roles", "Tenant Name", "Tenant FQDN"]}
-        rows={(data || []).map((m: any) => [m.user_id, m.tenant_id, m.roles.join(", "), m.tenant_name, m.tenant_fqdn])}
+        rows={(data || []).map((m: any) => [
+          m.user_id,
+          m.tenant_id,
+          m.roles.join(", "),
+          m.tenant_name,
+          m.tenant_fqdn,
+        ])}
       />
     </div>
   );

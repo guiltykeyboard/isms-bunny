@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { apiFetch } from "../lib/api";
-import { getInitialMode, palette, resolveMode, ThemeMode } from "../styles/theme";
-
-type Provider = { id: string; name: string; type: string; tenant_id?: string };
-const isSaml = (p: Provider) => p.type === "saml";
-const isOidc = (p: Provider) => p.type === "oidc";
+import {
+  getInitialMode,
+  palette,
+  resolveMode,
+  ThemeMode,
+} from "../styles/theme";
 
 export default function Login() {
   const [mode] = useState<ThemeMode>(() =>
@@ -15,19 +16,10 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [totp, setTotp] = useState("");
-  const [providers, setProviders] = useState<Provider[]>([]);
   const [status, setStatus] = useState<string | null>(null);
-  const [recommendation, setRecommendation] = useState<"local" | "oidc" | "saml" | string>("local");
-  const [enforceExternal, setEnforceExternal] = useState(false);
-  const [allowLocalFallback, setAllowLocalFallback] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [pendingCallback, setPendingCallback] = useState<string | null>(null);
-
-  useEffect(() => {
-    apiFetch("/providers/public")
-      .then((p) => setProviders(p))
-      .catch(() => setProviders([]));
-  }, []);
+  const [authRoute, setAuthRoute] = useState<"local" | "external" | null>(null);
+  const [externalProvider, setExternalProvider] = useState<any>(null);
+  const [, setAllowLocalFallback] = useState(false);
 
   const determineMethod = async () => {
     if (!email) {
@@ -36,22 +28,19 @@ export default function Login() {
     }
     setStatus("Checking sign-in method…");
     try {
-      const res = await apiFetch(`/auth/method?email=${encodeURIComponent(email)}`);
-      setRecommendation(res.recommendation);
-      setEnforceExternal(res.enforce_external);
-      setAllowLocalFallback(res.allow_local_fallback);
-      setStatus(null);
-      // Auto-flow: if external is enforced, redirect immediately; if local is recommended, show password form.
-      if (res.enforce_external && res.providers?.length) {
-        const first = res.providers[0];
-        if (first.type === "oidc") return startOidc(first.name);
-        if (first.type === "saml") return startSaml(first.name);
-      }
-      if (res.recommendation === "local") {
-        setShowPassword(true);
+      const res = await apiFetch(
+        `/auth/login/auto?email=${encodeURIComponent(email)}`,
+      );
+      setAllowLocalFallback(Boolean(res.allow_local_fallback));
+      if (res.route === "external" && res.provider) {
+        setAuthRoute("external");
+        setExternalProvider(res.provider);
+        if (res.provider.type === "oidc") return startOidc(res.provider.name);
+        if (res.provider.type === "saml") return startSaml(res.provider.name);
       } else {
-        setShowPassword(false);
+        setAuthRoute("local");
       }
+      setStatus(null);
     } catch (e: any) {
       setStatus(e.message || "Failed to resolve sign-in method");
     }
@@ -89,7 +78,9 @@ export default function Login() {
           id: base64urlToBuffer(c.id),
         })),
       } as any;
-      const cred = (await navigator.credentials.get({ publicKey })) as PublicKeyCredential;
+      const cred = (await navigator.credentials.get({
+        publicKey,
+      })) as PublicKeyCredential;
       if (!cred) throw new Error("No credential");
       const resp = cred.response as AuthenticatorAssertionResponse;
       await apiFetch("/webauthn/login/verify", {
@@ -104,7 +95,9 @@ export default function Login() {
               clientDataJSON: bufferToBase64url(resp.clientDataJSON),
               authenticatorData: bufferToBase64url(resp.authenticatorData),
               signature: bufferToBase64url(resp.signature),
-              userHandle: resp.userHandle ? bufferToBase64url(resp.userHandle) : undefined,
+              userHandle: resp.userHandle
+                ? bufferToBase64url(resp.userHandle)
+                : undefined,
             },
           },
         }),
@@ -116,11 +109,14 @@ export default function Login() {
     }
   };
 
-  const startOidc = async (name: string) => {
+  const startOidc = async (nameOrId: string) => {
     setStatus("Redirecting to provider…");
     try {
-      const { auth_url } = await apiFetch(`/auth/oidc/${encodeURIComponent(name)}/start`);
-      window.location.href = auth_url;
+      const { auth_url, params } = await apiFetch(
+        `/oidc/start/${encodeURIComponent(nameOrId)}`,
+      );
+      const url = auth_url + "?" + new URLSearchParams(params).toString();
+      window.location.href = url;
     } catch (e: any) {
       setStatus(e.message || "OIDC start failed");
     }
@@ -129,7 +125,9 @@ export default function Login() {
   const startSaml = async (name: string) => {
     setStatus("Redirecting to SAML…");
     try {
-      const resp = await apiFetch(`/auth/saml/${encodeURIComponent(name)}/login`);
+      const resp = await apiFetch(
+        `/auth/saml/${encodeURIComponent(name)}/login`,
+      );
       if (resp.redirect) {
         setPendingCallback("saml");
         window.location.href = resp.redirect;
@@ -142,7 +140,14 @@ export default function Login() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: colors.background, color: colors.text, padding: "2rem" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: colors.background,
+        color: colors.text,
+        padding: "2rem",
+      }}
+    >
       <h1>Sign in</h1>
       <div style={{ display: "grid", gap: "1rem", maxWidth: 420 }}>
         <input
@@ -152,25 +157,27 @@ export default function Login() {
           style={input(colors)}
           autoComplete="email"
         />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="password"
-          style={input(colors)}
-          disabled={!showPassword && enforceExternal}
-        />
-        <input
-          value={totp}
-          onChange={(e) => setTotp(e.target.value)}
-          placeholder="TOTP (if enabled)"
-          style={input(colors)}
-          disabled={!showPassword && enforceExternal}
-        />
+        {authRoute !== "external" && (
+          <>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="password"
+              style={input(colors)}
+            />
+            <input
+              value={totp}
+              onChange={(e) => setTotp(e.target.value)}
+              placeholder="TOTP (required if your account is external-first)"
+              style={input(colors)}
+            />
+          </>
+        )}
         <button style={btn(colors)} onClick={determineMethod}>
           Continue
         </button>
-        {status === null && showPassword && (recommendation === "local" || allowLocalFallback || !enforceExternal) && (
+        {status === null && authRoute === "local" && (
           <>
             <button style={btn(colors)} onClick={loginPassword}>
               Sign in with password
@@ -180,29 +187,14 @@ export default function Login() {
             </button>
           </>
         )}
-        {(status === null && providers.some(isOidc)) && (
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            {providers.filter(isOidc).map((p) => (
-              <button key={p.id} style={btn(colors)} onClick={() => startOidc(p.name)}>
-                {p.name} (OIDC)
-              </button>
-            ))}
-          </div>
-        )}
-        {(status === null && providers.some(isSaml)) && (
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            {providers.filter(isSaml).map((p) => (
-              <button key={p.id} style={btn(colors)} onClick={() => startSaml(p.name)}>
-                {p.name} (SAML)
-              </button>
-            ))}
-          </div>
-        )}
       </div>
-      {status && <p style={{ marginTop: "1rem", color: colors.muted }}>{status}</p>}
+      {status && (
+        <p style={{ marginTop: "1rem", color: colors.muted }}>{status}</p>
+      )}
       {pendingCallback && (
         <p style={{ marginTop: "0.5rem", color: colors.muted }}>
-          Complete the {pendingCallback.toUpperCase()} prompt in the new window if it did not auto-redirect.
+          Complete the {pendingCallback.toUpperCase()} prompt in the new window
+          if it did not auto-redirect.
         </p>
       )}
     </div>

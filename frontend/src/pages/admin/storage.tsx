@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
-import { getInitialMode, palette, resolveMode, ThemeMode } from "../../styles/theme";
+import {
+  getInitialMode,
+  palette,
+  resolveMode,
+  ThemeMode,
+} from "../../styles/theme";
 
 type StorageConfig = {
   use_msp_storage?: boolean;
@@ -61,17 +66,35 @@ export default function StorageAdmin() {
   };
 
   return (
-    <div style={{ padding: "2rem", background: colors.background, color: colors.text, minHeight: "100vh" }}>
+    <div
+      style={{
+        padding: "2rem",
+        background: colors.background,
+        color: colors.text,
+        minHeight: "100vh",
+      }}
+    >
       <h1>Storage settings</h1>
       <p style={{ color: colors.muted }}>
-        Choose MSP-shared storage (with per-tenant prefixes) or provide tenant-specific S3 credentials.
+        Choose MSP-shared storage (with per-tenant prefixes) or provide
+        tenant-specific S3 credentials. MSP storage uses prefixes:
+        tenants/&lt;tenant-id&gt; (or msp/&lt;id&gt; for internal MSP).
       </p>
-      <div style={{ marginTop: "1rem", display: "grid", gap: "0.75rem", maxWidth: 520 }}>
+      <div
+        style={{
+          marginTop: "1rem",
+          display: "grid",
+          gap: "0.75rem",
+          maxWidth: 520,
+        }}
+      >
         <label style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <input
             type="checkbox"
             checked={Boolean(cfg.use_msp_storage)}
-            onChange={(e) => setCfg({ ...cfg, use_msp_storage: e.target.checked })}
+            onChange={(e) =>
+              setCfg({ ...cfg, use_msp_storage: e.target.checked })
+            }
           />
           Use MSP shared storage (recommended)
         </label>
@@ -79,7 +102,9 @@ export default function StorageAdmin() {
           <input
             type="checkbox"
             checked={cfg.allow_local_login ?? true}
-            onChange={(e) => setCfg({ ...cfg, allow_local_login: e.target.checked })}
+            onChange={(e) =>
+              setCfg({ ...cfg, allow_local_login: e.target.checked })
+            }
           />
           Allow local login (break-glass)
         </label>
@@ -121,10 +146,19 @@ export default function StorageAdmin() {
         <button style={btn(colors)} onClick={save}>
           Save
         </button>
-        <div style={{ marginTop: "1rem", padding: "1rem", borderRadius: 12, background: colors.surface, color: colors.text }}>
+        <div
+          style={{
+            marginTop: "1rem",
+            padding: "1rem",
+            borderRadius: 12,
+            background: colors.surface,
+            color: colors.text,
+          }}
+        >
           <h3>Migration</h3>
           <p style={{ color: colors.muted, marginTop: 0 }}>
-            Copy objects between MSP shared storage and a BYO bucket. Use cautiously; long-running operations may take time.
+            Copy objects between MSP shared storage and a BYO bucket. Use
+            cautiously; long-running operations may take time.
           </p>
           <div style={{ display: "grid", gap: "0.5rem" }}>
             <input
@@ -142,24 +176,37 @@ export default function StorageAdmin() {
             <input
               placeholder="Target endpoint (optional)"
               value={target.endpoint || ""}
-              onChange={(e) => setTarget({ ...target, endpoint: e.target.value })}
+              onChange={(e) =>
+                setTarget({ ...target, endpoint: e.target.value })
+              }
               style={input(colors)}
             />
             <input
               placeholder="Target access key"
               value={target.access_key || ""}
-              onChange={(e) => setTarget({ ...target, access_key: e.target.value })}
+              onChange={(e) =>
+                setTarget({ ...target, access_key: e.target.value })
+              }
               style={input(colors)}
             />
             <input
               placeholder="Target secret key"
               type="password"
               value={target.secret_key || ""}
-              onChange={(e) => setTarget({ ...target, secret_key: e.target.value })}
+              onChange={(e) =>
+                setTarget({ ...target, secret_key: e.target.value })
+              }
               style={input(colors)}
             />
           </div>
-          <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "0.75rem",
+              marginTop: "0.75rem",
+              flexWrap: "wrap",
+            }}
+          >
             <button style={btn(colors)} onClick={() => migrate("to_byo")}>
               Migrate to BYO bucket
             </button>

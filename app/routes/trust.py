@@ -160,6 +160,75 @@ async def generate_trust_content(
     return {"detail": "generated", "overview_md": overview}
 
 
+@router.get("/trust/gated")
+async def gated_content(
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    """
+    Serve gated policies/attestations only if the user's email has an approved request
+    and the account has TOTP enabled (break-glass still allowed).
+    """
+    tenant_id = current_tenant()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    # Require approved access request for this email
+    req = await session.execute(
+        text(
+            """
+            SELECT 1 FROM trust_access_requests
+            WHERE tenant_id=:tid AND lower(email)=:email AND status='approved'
+            ORDER BY updated_at DESC NULLS LAST, created_at DESC
+            LIMIT 1
+            """
+        ),
+        {"tid": tenant_id, "email": user.email.lower()},
+    )
+    if not req.first():
+        raise HTTPException(status_code=403, detail="Access request not approved")
+    # Require TOTP enabled for external users
+    mfa = await session.execute(
+        text(
+            """
+            SELECT mfa_enabled FROM local_credentials
+            WHERE user_id=:uid
+            """
+        ),
+        {"uid": user.id},
+    )
+    row = mfa.fetchone()
+    if not row or not row[0]:
+        raise HTTPException(status_code=403, detail="TOTP required to view gated content")
+
+    rows = await session.execute(
+        text(
+            """
+            SELECT gated_policies, gated_attestations
+            FROM trust_pages
+            WHERE tenant_id=:tid
+            """
+        ),
+        {"tid": tenant_id},
+    )
+    gated = rows.fetchone()
+    await session.execute(
+        text(
+            """
+            INSERT INTO trust_access_audit (tenant_id, user_id, email, action)
+            VALUES (:tid, :uid, :email, 'viewed_gated_content')
+            """
+        ),
+        {"tid": tenant_id, "uid": user.id, "email": user.email},
+    )
+    await session.commit()
+    if not gated:
+        return {"gated_policies": [], "gated_attestations": []}
+    return {
+        "gated_policies": gated[0] or [],
+        "gated_attestations": gated[1] or [],
+    }
+
+
 @router.post("/trust/request-access")
 async def request_trust_access(
     payload: dict, session: Annotated[AsyncSession, Depends(get_session)]
