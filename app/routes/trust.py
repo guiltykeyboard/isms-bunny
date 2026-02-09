@@ -13,6 +13,7 @@ from app.db import get_session
 from app.deps import get_current_user_jwt
 from app.emailer import resolve_smtp_config, send_email
 from app.models import Tenant, User
+from app.storage import build_storage_client
 
 router = APIRouter(tags=["trust"])
 settings = get_settings()
@@ -221,11 +222,47 @@ async def gated_content(
         {"tid": tenant_id, "uid": user.id, "email": user.email},
     )
     await session.commit()
+    # Fetch evidence files and generate presigned GET links
+    evidence_rows = await session.execute(
+        text(
+            """
+            SELECT id, filename, s3_key, added_at
+            FROM evidence_files
+            WHERE tenant_id=:tid
+            ORDER BY added_at DESC
+            """
+        ),
+        {"tid": tenant_id},
+    )
+    evidence_list = [dict(r) for r in evidence_rows.mappings().all()]
+    if evidence_list:
+        # build storage client once
+        tenant_cfg = await session.execute(
+            text("SELECT storage_config, type FROM tenants WHERE id=:tid"), {"tid": tenant_id}
+        )
+        cfg_row = tenant_cfg.first()
+        storage = build_storage_client(
+            cfg_row[0] or {"use_msp_storage": True},
+            default_bucket=settings.s3_bucket,
+            default_region=settings.s3_region,
+            default_endpoint=settings.s3_endpoint,
+            default_access_key=settings.s3_access_key_id,
+            default_secret=settings.s3_secret_access_key,
+            tenant_prefix=str(tenant_id),
+            tenant_type=cfg_row[1] if cfg_row else None,
+        )
+        for ev in evidence_list:
+            ev["download_url"] = storage.client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": storage.config.bucket, "Key": ev["s3_key"]},
+                ExpiresIn=600,
+            )
     if not gated:
-        return {"gated_policies": [], "gated_attestations": []}
+        return {"gated_policies": [], "gated_attestations": [], "evidence": evidence_list}
     return {
         "gated_policies": gated[0] or [],
         "gated_attestations": gated[1] or [],
+        "evidence": evidence_list,
     }
 
 
