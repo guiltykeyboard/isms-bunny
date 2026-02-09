@@ -8,6 +8,15 @@ CREATE TABLE IF NOT EXISTS controls (
     description text,
     tags text[] DEFAULT '{}'
 );
+
+-- Backfill columns if the table already existed from earlier migrations
+ALTER TABLE controls
+    ADD COLUMN IF NOT EXISTS standard text,
+    ADD COLUMN IF NOT EXISTS ref text,
+    ADD COLUMN IF NOT EXISTS title text,
+    ADD COLUMN IF NOT EXISTS description text,
+    ADD COLUMN IF NOT EXISTS tags text[] DEFAULT '{}';
+
 CREATE UNIQUE INDEX IF NOT EXISTS controls_standard_ref_idx ON controls(standard, ref);
 
 CREATE TABLE IF NOT EXISTS control_states (
