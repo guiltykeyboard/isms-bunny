@@ -2,7 +2,8 @@
 -- Run with a superuser; app connections should be limited-role users.
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "citext";
 
 -- Session context variables set by the app:
 -- SET LOCAL app.current_user_id = 'uuid';
