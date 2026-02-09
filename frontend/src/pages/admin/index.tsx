@@ -9,6 +9,7 @@ export default function AdminIndex() {
     { href: "/admin/saml-logs", label: "SAML Logs" },
     { href: "/admin/users", label: "Users" },
     { href: "/admin/controls", label: "Controls / SoA" },
+    { href: "/admin/risks", label: "Risk Register" },
     { href: "/admin/trust-editor", label: "Trust Editor" },
     { href: "/admin/access-requests", label: "Trust Access Requests" },
     { href: "/admin/trust-audit", label: "Trust Audit" },
