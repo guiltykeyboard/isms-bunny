@@ -36,5 +36,6 @@ jobs:
         run: |
           npm install -g vercel
           vercel pull --yes --environment=preview --token=$VERCEL_TOKEN --cwd frontend
+          vercel build --token=$VERCEL_TOKEN --cwd frontend
           vercel deploy --prebuilt --token=$VERCEL_TOKEN --yes --cwd frontend > deploy_url.txt
           echo "preview_url=$(cat deploy_url.txt)" >> $GITHUB_OUTPUT
