@@ -1,9 +1,10 @@
-from typing import Annotated, List
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.alerts import dispatch_alert
 from app.authz import require_msp_admin
 from app.context import current_tenant
 from app.db import get_session
@@ -71,7 +72,9 @@ async def upsert_state(
     await session.execute(
         text(
             """
-            INSERT INTO control_states (control_id, tenant_id, status, rationale, owner_user_id, last_reviewed_at)
+            INSERT INTO control_states (
+                control_id, tenant_id, status, rationale, owner_user_id, last_reviewed_at
+            )
             VALUES (:cid, :tid, :status, :rationale, :owner, now())
             ON CONFLICT (control_id, tenant_id)
               DO UPDATE SET status = EXCLUDED.status,
@@ -122,6 +125,15 @@ async def add_evidence(
         },
     )
     await session.commit()
+    # Alert for evidence upload
+    await dispatch_alert(
+        session,
+        tenant_id,
+        "evidence_uploaded",
+        subject=f"[ISMS-Bunny] Evidence added to control {control_id}",
+        body_text=f"Evidence '{name}' added to control {control_id}.",
+        webhook_payload={"control_id": control_id, "name": name, "type": "evidence_uploaded"},
+    )
     return {"detail": "added"}
 
 
@@ -151,24 +163,27 @@ async def list_evidence(
 @router.post("/{control_id}/evidence/upload")
 async def upload_evidence(
     control_id: str,
-    file: UploadFile = File(...),
-    session: Annotated[AsyncSession, Depends(get_session)] = Depends(),
-    user: Annotated[object, Depends(get_current_user_jwt)] = Depends(),
+    session: Annotated[AsyncSession, Depends(get_session)],
+    user: Annotated[object, Depends(get_current_user_jwt)],
+    file: UploadFile = File(...),  # noqa: B008
 ):
     """
-    Stub for evidence upload: records metadata; assumes frontend handles actual S3 upload and passes s3_key.
+    Stub for evidence upload: records metadata; assumes frontend handles actual
+    S3 upload and passes s3_key.
     """
     tenant_id = current_tenant()
     if not tenant_id:
         raise HTTPException(status_code=400, detail="Tenant not resolved")
     if not file:
         raise HTTPException(status_code=400, detail="file required")
-    # In this stub, we just record metadata; actual upload should be done client-side with a presigned URL.
+    # We only record metadata; actual upload should use a presigned URL client-side.
     s3_key = f"evidence/{tenant_id}/{control_id}/{file.filename}"
     await session.execute(
         text(
             """
-            INSERT INTO evidence_files (tenant_id, control_id, filename, s3_key, size_bytes, content_type, added_by)
+            INSERT INTO evidence_files (
+                tenant_id, control_id, filename, s3_key, size_bytes, content_type, added_by
+            )
             VALUES (:tid, :cid, :fn, :s3, :size, :ct, :user)
             """
         ),
@@ -187,15 +202,43 @@ async def upload_evidence(
 
 
 @router.post("/seed/iso27001")
-async def seed_iso27001(session: Annotated[AsyncSession, Depends(get_session)], user: Annotated[object, Depends(get_current_user_jwt)]):
+async def seed_iso27001(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    user: Annotated[object, Depends(get_current_user_jwt)],
+):
     # MSP admin only to avoid duplicates
     require_msp_admin(user.is_msp_admin)
     controls = [
-        ("ISO27001:2022", "A.5.1", "Policies for information security", "Provide management direction for information security."),
-        ("ISO27001:2022", "A.5.7", "Threat intelligence", "Collect and analyze threat intelligence to improve security posture."),
-        ("ISO27001:2022", "A.8.1", "User endpoint devices", "Protect endpoint devices with appropriate controls."),
-        ("ISO27001:2022", "A.12.1", "Logging and monitoring", "Log and monitor activities to identify events."),
-        ("ISO27001:2022", "A.17.1", "Information security continuity", "Ensure information security during disruptions."),
+        (
+            "ISO27001:2022",
+            "A.5.1",
+            "Policies for information security",
+            "Provide management direction for information security.",
+        ),
+        (
+            "ISO27001:2022",
+            "A.5.7",
+            "Threat intelligence",
+            "Collect and analyze threat intelligence to improve security posture.",
+        ),
+        (
+            "ISO27001:2022",
+            "A.8.1",
+            "User endpoint devices",
+            "Protect endpoint devices with appropriate controls.",
+        ),
+        (
+            "ISO27001:2022",
+            "A.12.1",
+            "Logging and monitoring",
+            "Log and monitor activities to identify events.",
+        ),
+        (
+            "ISO27001:2022",
+            "A.17.1",
+            "Information security continuity",
+            "Ensure information security during disruptions.",
+        ),
     ]
     for std, ref, title, desc in controls:
         await session.execute(

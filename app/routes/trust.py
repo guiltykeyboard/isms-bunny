@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.alerts import dispatch_alert
 from app.authz import enforce_current_tenant, require_msp_admin
 from app.config import get_settings
 from app.context import current_tenant
@@ -332,6 +333,24 @@ async def request_trust_access(
             )
     except Exception:
         pass
+    # Fire alert for trust request
+    await dispatch_alert(
+        session,
+        tenant_id,
+        "trust_request",
+        subject=f"[ISMS-Bunny] Trust request from {company}",
+        body_text=(
+            f"Name: {name}\nEmail: {email}\nCompany: {company}\n"
+            f"Justification: {justification}"
+        ),
+        webhook_payload={
+            "type": "trust_request",
+            "name": name,
+            "email": email,
+            "company": company,
+            "justification": justification,
+        },
+    )
     return {"detail": "request received"}
 
 

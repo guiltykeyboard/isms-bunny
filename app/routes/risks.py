@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.alerts import dispatch_alert
 from app.context import current_tenant
 from app.db import get_session
 from app.deps import get_current_user_jwt
@@ -76,7 +77,8 @@ async def list_risks(
     rows = await session.execute(
         text(
             """
-            SELECT id, title, threat, vulnerability, impact, likelihood, status, treatment, asset_id, owner_user_id
+            SELECT id, title, threat, vulnerability, impact, likelihood,
+                   status, treatment, asset_id, owner_user_id
             FROM risks
             WHERE tenant_id=:tid
             ORDER BY created_at DESC
@@ -102,8 +104,14 @@ async def add_risk(
     await session.execute(
         text(
             """
-            INSERT INTO risks (tenant_id, asset_id, title, threat, vulnerability, impact, likelihood, status, treatment, owner_user_id)
-            VALUES (:tid, :asset, :title, :threat, :vuln, :impact, :likelihood, :status, :treatment, :owner)
+            INSERT INTO risks (
+                tenant_id, asset_id, title, threat, vulnerability, impact,
+                likelihood, status, treatment, owner_user_id
+            )
+            VALUES (
+                :tid, :asset, :title, :threat, :vuln, :impact,
+                :likelihood, :status, :treatment, :owner
+            )
             """
         ),
         {
@@ -120,4 +128,12 @@ async def add_risk(
         },
     )
     await session.commit()
+    await dispatch_alert(
+        session,
+        tid,
+        "risk_created",
+        subject=f"[ISMS-Bunny] New risk: {title}",
+        body_text=f"Risk created: {title}",
+        webhook_payload={"title": title, "risk_id": None, "type": "risk_created"},
+    )
     return {"detail": "risk added"}

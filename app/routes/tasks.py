@@ -1,15 +1,13 @@
-from datetime import datetime, timezone
 from typing import Annotated
 
-import requests
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.alerts import dispatch_alert
 from app.context import current_tenant
 from app.db import get_session
 from app.deps import get_current_user_jwt
-from app.emailer import resolve_smtp_config, send_email
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -73,10 +71,6 @@ async def send_reminders(
     if not row:
         raise HTTPException(status_code=404, detail="Tenant not found")
     tenant_name = row["name"]
-    tenant_webhook = row["reminder_webhook_url"]
-    tenant_smtp = row["smtp_config"]
-    channel = row["alert_channel"] or "webhook"
-    recipients = row["alert_recipients"] or []
 
     res = await session.execute(
         text(
@@ -96,74 +90,42 @@ async def send_reminders(
     if not tasks:
         return {"detail": "no tasks due soon", "count": 0}
 
-    body = {
-        "tenant_id": str(tid),
-        "tenant_name": tenant_name,
-        "days": days,
-        "task_count": len(tasks),
-        "tasks": tasks,
-    }
-    sent_webhook = False
-    sent_email = False
-
-    webhook_url = (payload or {}).get("webhook_url") or tenant_webhook
-    if channel in {"webhook", "both"} and webhook_url:
-        try:
-            resp = requests.post(webhook_url, json=body, timeout=8)
-            resp.raise_for_status()
-            sent_webhook = True
-        except Exception as exc:  # pragma: no cover
-            raise HTTPException(
-                status_code=502, detail=f"Webhook delivery failed: {exc}"
-            ) from exc
-
-    if channel in {"email", "both"} and recipients:
-        smtp_cfg = resolve_smtp_config(tenant_smtp)
-        subject = f"[ISMS-Bunny] {len(tasks)} tasks due in next {days} days"
-        lines = [
-            f"Tenant: {tenant_name}",
-            f"Due within {days} days:",
-            "",
-        ]
-        for t in tasks:
-            lines.append(
-                "- {title} (status {status}, due {due}, control {control}, risk {risk})".format(
-                    title=t["title"],
-                    status=t["status"],
-                    due=t["due_date"],
-                    control=t.get("control_id") or "-",
-                    risk=t.get("risk_id") or "-",
-                )
+    subject = f"[ISMS-Bunny] {len(tasks)} tasks due in next {days} days"
+    lines = [
+        f"Tenant: {tenant_name}",
+        f"Due within {days} days:",
+        "",
+    ]
+    for t in tasks:
+        lines.append(
+            "- {title} (status {status}, due {due}, control {control}, risk {risk})".format(
+                title=t["title"],
+                status=t["status"],
+                due=t["due_date"],
+                control=t.get("control_id") or "-",
+                risk=t.get("risk_id") or "-",
             )
-        body_text = "\n".join(lines)
-        for email in recipients:
-            send_email(smtp_cfg, email, subject, body_text)
-        sent_email = True
+        )
+    body_text = "\n".join(lines)
 
-    if channel in {"webhook", "both"} and not sent_webhook and webhook_url is None:
-        raise HTTPException(status_code=400, detail="No reminder webhook configured")
-
-    now = datetime.now(timezone.utc)
-    await session.execute(
-        text(
-            """
-            INSERT INTO tenant_alert_prefs (tenant_id, alert_type, last_sent_at)
-            VALUES (:tid, 'task_due', :now)
-            ON CONFLICT (tenant_id, alert_type)
-            DO UPDATE SET last_sent_at = :now
-            """
-        ),
-        {"tid": tid, "now": now},
+    result = await dispatch_alert(
+        session=session,
+        tenant_id=tid,
+        alert_type="task_due",
+        subject=subject,
+        body_text=body_text,
+        webhook_payload={
+            "alert_type": "task_due",
+            "tenant_id": str(tid),
+            "tenant_name": tenant_name,
+            "days": days,
+            "task_count": len(tasks),
+            "tasks": tasks,
+        },
+        webhook_override=(payload or {}).get("webhook_url"),
     )
-    await session.commit()
 
-    return {
-        "detail": "reminders sent",
-        "count": len(tasks),
-        "webhook": sent_webhook,
-        "email": sent_email,
-        "last_sent_at": now.isoformat(),
-    }
+    return {"detail": "reminders sent", "count": len(tasks), **result}
 
 
 @router.post("")
