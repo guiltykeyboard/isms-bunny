@@ -3,8 +3,8 @@ import uuid
 from typing import List
 
 import requests
-from sqlalchemy import text
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 
 from app.config import get_settings
 from app.db import SessionLocal
