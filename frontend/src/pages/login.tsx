@@ -3,6 +3,8 @@ import { apiFetch } from "../lib/api";
 import { palette, resolveMode, getInitialMode, ThemeMode } from "../styles/theme";
 
 type Provider = { id: string; name: string; type: string; tenant_id?: string };
+const isSaml = (p: Provider) => p.type === "saml";
+const isOidc = (p: Provider) => p.type === "oidc";
 
 export default function Login() {
   const [mode] = useState<ThemeMode>(() =>
@@ -91,6 +93,20 @@ export default function Login() {
     }
   };
 
+  const startSaml = async (name: string) => {
+    setStatus("Redirecting to SAML…");
+    try {
+      const resp = await apiFetch(`/auth/saml/${encodeURIComponent(name)}/login`);
+      if (resp.redirect) {
+        window.location.href = resp.redirect;
+      } else {
+        setStatus("SAML provider did not return redirect");
+      }
+    } catch (e: any) {
+      setStatus(e.message || "SAML start failed");
+    }
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: colors.background, color: colors.text, padding: "2rem" }}>
       <h1>Sign in</h1>
@@ -121,17 +137,20 @@ export default function Login() {
         <button style={btn(colors)} onClick={loginPasskey}>
           Sign in with passkey
         </button>
-        {providers.filter((p) => p.type === "oidc").length > 0 && (
+        {(providers.some(isOidc) || providers.some(isSaml)) && (
           <div>
             <p style={{ color: colors.muted, marginBottom: "0.3rem" }}>Single Sign-On</p>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              {providers
-                .filter((p) => p.type === "oidc")
-                .map((p) => (
-                  <button key={p.id} style={btn(colors)} onClick={() => startOidc(p.name)}>
-                    {p.name}
-                  </button>
-                ))}
+              {providers.filter(isOidc).map((p) => (
+                <button key={p.id} style={btn(colors)} onClick={() => startOidc(p.name)}>
+                  {p.name} (OIDC)
+                </button>
+              ))}
+              {providers.filter(isSaml).map((p) => (
+                <button key={p.id} style={btn(colors)} onClick={() => startSaml(p.name)}>
+                  {p.name} (SAML)
+                </button>
+              ))}
             </div>
           </div>
         )}
