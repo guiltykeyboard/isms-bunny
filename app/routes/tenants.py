@@ -111,6 +111,7 @@ async def current_tenant_info(
         "fqdn": t.fqdn,
         "type": t.type,
         "storage_config": getattr(t, "storage_config", None),
+        "smtp_config": getattr(t, "smtp_config", None),
     }
 
 
@@ -140,6 +141,31 @@ async def update_tenant_storage(
         "id": str(t.id),
         "storage_config": storage_cfg,
     }
+
+
+@router.patch("/{tenant_id}/smtp")
+async def update_tenant_smtp(
+    tenant_id: UUID,
+    payload: dict,
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    """
+    Update per-tenant SMTP configuration. Empty payload clears to MSP default.
+    """
+    require_msp_admin(user.is_msp_admin)
+    smtp_cfg = payload.get("smtp_config") or payload
+    result = await session.execute(
+        sql_update(Tenant)
+        .where(Tenant.id == tenant_id)
+        .values(smtp_config=smtp_cfg)
+        .returning(Tenant)
+    )
+    t = result.scalar_one_or_none()
+    if not t:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    await session.commit()
+    return {"id": str(t.id), "smtp_config": smtp_cfg}
 
 
 @router.delete("/{tenant_id}", status_code=status.HTTP_204_NO_CONTENT)

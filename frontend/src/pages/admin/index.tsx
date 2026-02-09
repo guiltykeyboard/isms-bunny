@@ -10,6 +10,7 @@ export default function AdminIndex() {
     { href: "/admin/users", label: "Users" },
     { href: "/admin/trust-editor", label: "Trust Editor" },
     { href: "/admin/access-requests", label: "Trust Access Requests" },
+    { href: "/admin/smtp", label: "SMTP" },
   ];
   return (
     <div style={{ padding: "2rem", fontFamily: "Inter, system-ui, sans-serif" }}>
