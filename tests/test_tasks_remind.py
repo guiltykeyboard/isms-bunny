@@ -45,7 +45,8 @@ async def _clear_user(user_id: uuid.UUID):
 
 
 def _run(coro):
-    return asyncio.get_event_loop().run_until_complete(coro)
+    # Use a fresh event loop per call to avoid cross-loop issues with asyncpg/TestClient
+    return asyncio.run(coro)
 
 
 def test_task_remind_webhook(monkeypatch):
