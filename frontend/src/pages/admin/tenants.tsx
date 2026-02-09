@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { apiFetch } from "../../lib/api";
 import {
   palette,
@@ -92,16 +92,16 @@ export default function TenantsPage() {
       </form>
 
       <TableCard
-        title="Existing"
+        title="Existing (hierarchy)"
         colors={colors}
-        columns={["Name", "FQDN", "Type", "Parent", "Id"]}
-        rows={(data || []).map((t: any) => [
-          t.name,
-          t.fqdn,
-          t.type,
-          t.parent_tenant_id || "—",
-          t.id,
-        ])}
+        columns={["Path", "Type", "Id"]}
+        rows={(data || []).map((t: any) => {
+          const parent = (data || []).find(
+            (p: any) => p.id === t.parent_tenant_id,
+          );
+          const path = parent ? `${parent.name} → ${t.name}` : t.name;
+          return [path, t.type, t.id];
+        })}
       />
     </div>
   );
