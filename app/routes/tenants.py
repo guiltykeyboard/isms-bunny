@@ -416,6 +416,16 @@ async def get_alert_pref(
         }
     return dict(row)
 
+# List all supported alert types (static seed for now)
+@router.get("/alert-types")
+async def list_alert_types():
+    return [
+        {"id": "task_due", "description": "Task due soon"},
+        {"id": "evidence_uploaded", "description": "New evidence uploaded"},
+        {"id": "risk_created", "description": "New risk created"},
+        {"id": "trust_request", "description": "Trust access request"},
+    ]
+
 
 @router.put("/{tenant_id}/alerts/{alert_type}")
 async def set_alert_pref(

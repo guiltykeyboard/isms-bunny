@@ -23,6 +23,7 @@ export default function AlertsPage() {
   const colors = palette[resolveMode(mode)];
   const { data: tenant } = useSWR<any>("/tenants/current", apiFetch);
   const [prefs, setPrefs] = useState<AlertPref[]>([]);
+  const [alertTypes, setAlertTypes] = useState<{ id: string; description: string }[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -30,7 +31,9 @@ export default function AlertsPage() {
       if (!tenant?.id) return;
       setLoading(true);
       const res = await apiFetch(`/tenants/${tenant.id}/alerts`);
+      const types = await apiFetch("/tenants/alert-types");
       setPrefs(res || []);
+      setAlertTypes(types || []);
       setLoading(false);
     };
     load();
@@ -42,6 +45,10 @@ export default function AlertsPage() {
     (p.recipients || []).join(", "),
     p.last_sent_at || "—",
   ]);
+
+  const missing = alertTypes.filter(
+    (t) => !(prefs || []).some((p) => p.alert_type === t.id),
+  );
 
   return (
     <div
@@ -63,6 +70,20 @@ export default function AlertsPage() {
         columns={["Alert", "Channel", "Recipients", "Last sent"]}
         rows={rows}
       />
+      {missing.length > 0 && (
+        <div
+          style={{
+            marginTop: "1rem",
+            background: colors.surface,
+            padding: "0.75rem",
+            borderRadius: 10,
+            color: colors.muted,
+          }}
+        >
+          <strong>Not configured yet:</strong>{" "}
+          {missing.map((m) => m.description || m.id).join(", ")}
+        </div>
+      )}
       {!rows.length && !loading && (
         <div style={{ marginTop: "1rem", color: colors.muted }}>
           No alert preferences found.
