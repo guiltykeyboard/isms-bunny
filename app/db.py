@@ -1,3 +1,5 @@
+import os
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -22,6 +24,8 @@ SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 async def _set_rls(session: AsyncSession):
     """Push per-request context into Postgres for RLS policies."""
+    if os.getenv("SKIP_RLS_CONTEXT") == "1":
+        return
     def _literal(val):
         if val is None:
             return None
