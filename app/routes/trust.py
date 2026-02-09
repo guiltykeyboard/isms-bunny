@@ -259,6 +259,18 @@ async def request_trust_access(
         },
     )
     await session.commit()
+    # Optionally notify admins via email if SMTP configured
+    try:
+        smtp = resolve_smtp_config(session, tenant_id)
+        if smtp:
+            await send_email(
+                smtp,
+                to=email,
+                subject="Trust access request received",
+                body="Your request was received and is pending review.",
+            )
+    except Exception:
+        pass
     return {"detail": "request received"}
 
 
