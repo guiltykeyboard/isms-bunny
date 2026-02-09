@@ -40,6 +40,7 @@ export default function TasksPage() {
   const [webhookUrl, setWebhookUrl] = useState<string>("");
   const [channel, setChannel] = useState<string>("webhook");
   const [recipients, setRecipients] = useState<string>("");
+  const [lastSent, setLastSent] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +67,7 @@ export default function TasksPage() {
       const pref = await apiFetch(`/tenants/${tenant.id}/alerts/task_due`);
       setChannel(pref.channel || "webhook");
       setRecipients((pref.recipients || []).join(","));
+      setLastSent(pref.last_sent_at || null);
     };
     fetchPref();
   }, [tenant]);
@@ -139,6 +141,7 @@ export default function TasksPage() {
         </p>
         <div style={{ color: colors.muted, marginBottom: "0.35rem" }}>
           Current channel: <strong style={{ color: colors.text }}>{channel}</strong>
+          {lastSent ? ` • last sent ${lastSent}` : ""}
         </div>
         <div style={{ display: "flex", gap: "0.5rem", maxWidth: 720 }}>
           <input

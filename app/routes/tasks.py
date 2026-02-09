@@ -142,6 +142,19 @@ async def send_reminders(
     if channel in {"webhook", "both"} and not sent_webhook and webhook_url is None:
         raise HTTPException(status_code=400, detail="No reminder webhook configured")
 
+    await session.execute(
+        text(
+            """
+            INSERT INTO tenant_alert_prefs (tenant_id, alert_type, last_sent_at)
+            VALUES (:tid, 'task_due', now())
+            ON CONFLICT (tenant_id, alert_type)
+            DO UPDATE SET last_sent_at = now()
+            """
+        ),
+        {"tid": tid},
+    )
+    await session.commit()
+
     return {
         "detail": "reminders sent",
         "count": len(tasks),

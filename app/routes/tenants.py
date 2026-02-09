@@ -375,7 +375,7 @@ async def get_alert_pref(
     res = await session.execute(
         text(
             """
-            SELECT alert_type, channel, recipients
+            SELECT alert_type, channel, recipients, last_sent_at
             FROM tenant_alert_prefs
             WHERE tenant_id=:tid AND alert_type=:atype
             """
@@ -384,7 +384,7 @@ async def get_alert_pref(
     )
     row = res.mappings().first()
     if not row:
-        return {"alert_type": alert_type, "channel": "webhook", "recipients": []}
+        return {"alert_type": alert_type, "channel": "webhook", "recipients": [], "last_sent_at": None}
     return dict(row)
 
 
