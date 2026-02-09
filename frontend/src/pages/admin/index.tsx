@@ -9,6 +9,7 @@ export default function AdminIndex() {
     { href: "/admin/saml-logs", label: "SAML Logs" },
     { href: "/admin/users", label: "Users" },
     { href: "/admin/trust-editor", label: "Trust Editor" },
+    { href: "/admin/access-requests", label: "Trust Access Requests" },
   ];
   return (
     <div style={{ padding: "2rem", fontFamily: "Inter, system-ui, sans-serif" }}>

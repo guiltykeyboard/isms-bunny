@@ -187,3 +187,26 @@ async def request_trust_access(
     )
     await session.commit()
     return {"detail": "request received"}
+
+
+@router.get("/trust/requests")
+async def list_trust_requests(
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    tenant_id = current_tenant()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    require_msp_admin(user.is_msp_admin)
+    rows = await session.execute(
+        text(
+            """
+            SELECT id, name, email, company, justification, status, created_at
+            FROM trust_access_requests
+            WHERE tenant_id=:tid
+            ORDER BY created_at DESC
+            """
+        ),
+        {"tid": tenant_id},
+    )
+    return [dict(r) for r in rows.mappings().all()]
