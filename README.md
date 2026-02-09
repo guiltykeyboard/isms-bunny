@@ -37,7 +37,7 @@ Open-source, MSP-friendly ISMS and trust center scaffold. Goals:
    - For local dev you can run `scripts/apply_migrations.sh` (uses `DATABASE_URL` if set).
 4. Open `http://localhost:8000/health` for a quick check.
 5. Auth (alpha): local login via `POST /auth/login` (email/password, optional `totp_code`) sets an httpOnly `access_token` cookie and returns a bearer token. Logout via `POST /auth/logout`. Dev headers `X-User-Id` / `X-Is-Msp-Admin` still work for local testing. OIDC/SAML endpoints stubbed for Okta/Azure/Google/BYO.
-6. Setup wizard: visit `/setup` (frontend dev server) to set MSP tenant name/FQDN, admin user, and S3 settings on first run—no manual .env edits needed for basics.
+6. Setup wizard: visit `/setup` (frontend dev server) to set MSP tenant name/FQDN, admin user, and S3 settings on first run—no manual .env edits needed for basics. Trust content is generated from `iso27001/public/*.md` via the admin Trust Editor (avoid manual markdown edits).
 
 Theme preference
 - Modes: `system` (default, honors browser `prefers-color-scheme`), `dark`, `light`.

@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -96,3 +97,42 @@ async def update_trust_content(
     await session.execute(stmt)
     await session.commit()
     return {"detail": "updated"}
+
+
+def _collect_public_isms_docs(base: Path) -> str:
+    """
+    Generate a simple public-facing summary from iso27001/public/*.md.
+    """
+    public_dir = base / "iso27001" / "public"
+    if not public_dir.exists():
+        return "Public ISMS summaries not found."
+    summaries = []
+    for path in sorted(public_dir.glob("*.md")):
+        try:
+            text = path.read_text(encoding="utf-8")
+            first_line = text.strip().splitlines()[0] if text.strip() else path.name
+            summaries.append(f"- {first_line} ({path.name})")
+        except Exception:
+            continue
+    if not summaries:
+        return "Public ISMS summaries not found."
+    return "# Trust Center Overview\n\n" + "\n".join(summaries)
+
+
+@router.post("/trust/generate")
+async def generate_trust_content(
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    tenant_id = current_tenant()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    enforce_current_tenant(tenant_id)
+    require_msp_admin(user.is_msp_admin)
+    overview = _collect_public_isms_docs(Path("."))
+    stmt = update(Tenant.__table__.metadata.tables["trust_pages"]).where(
+        Tenant.__table__.metadata.tables["trust_pages"].c.tenant_id == tenant_id
+    ).values(overview_md=overview)
+    await session.execute(stmt)
+    await session.commit()
+    return {"detail": "generated", "overview_md": overview}

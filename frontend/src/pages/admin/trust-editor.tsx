@@ -21,16 +21,14 @@ export default function TrustEditor() {
     }
   };
 
-  const save = async () => {
-    setStatus("Saving…");
+  const regenerate = async () => {
+    setStatus("Generating from ISMS public docs…");
     try {
-      await apiFetch("/trust/content", {
-        method: "PUT",
-        body: JSON.stringify(content),
-      });
-      setStatus("Saved");
+      const res = await apiFetch("/trust/generate", { method: "POST" });
+      setContent((prev: any) => ({ ...prev, overview_md: res.overview_md }));
+      setStatus("Generated from documents");
     } catch (e: any) {
-      setStatus(e.message || "Save failed");
+      setStatus(e.message || "Generate failed");
     }
   };
 
@@ -40,16 +38,16 @@ export default function TrustEditor() {
 
   return (
     <div style={{ padding: "2rem", background: colors.background, color: colors.text, minHeight: "100vh" }}>
-      <h1>Trust Page Editor</h1>
-      <p style={{ color: colors.muted }}>Edit public overview markdown.</p>
-      <textarea
-        value={content.overview_md || ""}
-        onChange={(e) => setContent({ ...content, overview_md: e.target.value })}
-        style={{ width: "100%", height: "300px", padding: "1rem", background: colors.surface, color: colors.text, borderRadius: 12, border: `1px solid ${colors.surface}` }}
-      />
+      <h1>Trust Page</h1>
+      <p style={{ color: colors.muted }}>
+        Overview is generated from public ISMS documents (iso27001/public/*.md). Use regenerate to refresh.
+      </p>
+      <pre style={{ whiteSpace: "pre-wrap", padding: "1rem", background: colors.surface, color: colors.text, borderRadius: 12, border: `1px solid ${colors.surface}` }}>
+        {content.overview_md || "No content yet."}
+      </pre>
       <div style={{ marginTop: "1rem" }}>
-        <button style={btn(colors)} onClick={save}>
-          Save
+        <button style={btn(colors)} onClick={regenerate}>
+          Regenerate from docs
         </button>
       </div>
       {status && <p style={{ color: colors.muted, marginTop: "0.75rem" }}>{status}</p>}
