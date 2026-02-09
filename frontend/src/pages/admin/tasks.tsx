@@ -137,6 +137,9 @@ export default function TasksPage() {
         <p style={{ color: colors.muted, marginTop: 0 }}>
           Set a webhook to receive due-soon task reminders for this tenant.
         </p>
+        <div style={{ color: colors.muted, marginBottom: "0.35rem" }}>
+          Current channel: <strong style={{ color: colors.text }}>{channel}</strong>
+        </div>
         <div style={{ display: "flex", gap: "0.5rem", maxWidth: 720 }}>
           <input
             style={input(colors)}
