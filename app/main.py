@@ -8,6 +8,7 @@ from app.routes import (
     oidc,
     providers,
     controls,
+    risks,
     saml_logs,
     setup,
     tenants,
@@ -48,3 +49,4 @@ app.include_router(webauthn.router)
 app.include_router(providers.router)
 app.include_router(saml_logs.router)
 app.include_router(controls.router)
+app.include_router(risks.router)
