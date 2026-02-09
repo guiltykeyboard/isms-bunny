@@ -9,6 +9,7 @@ type StorageConfig = {
   endpoint?: string;
   access_key?: string;
   secret_key?: string;
+  prefix?: string;
 };
 
 export default function StorageAdmin() {
@@ -18,6 +19,7 @@ export default function StorageAdmin() {
   const colors = palette[resolveMode(mode)];
   const [tenant, setTenant] = useState<any>(null);
   const [cfg, setCfg] = useState<StorageConfig>({});
+  const [target, setTarget] = useState<StorageConfig>({});
   const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,6 +42,20 @@ export default function StorageAdmin() {
       setStatus("Saved.");
     } catch (e: any) {
       setStatus(e.message || "Save failed");
+    }
+  };
+
+  const migrate = async (direction: "to_msp" | "to_byo") => {
+    if (!tenant) return;
+    setStatus("Migrating… this may take time.");
+    try {
+      await apiFetch(`/tenants/${tenant.id}/storage/migrate`, {
+        method: "POST",
+        body: JSON.stringify({ direction, target }),
+      });
+      setStatus("Migration complete.");
+    } catch (e: any) {
+      setStatus(e.message || "Migration failed");
     }
   };
 
@@ -104,6 +120,53 @@ export default function StorageAdmin() {
         <button style={btn(colors)} onClick={save}>
           Save
         </button>
+        <div style={{ marginTop: "1rem", padding: "1rem", borderRadius: 12, background: colors.surface, color: colors.text }}>
+          <h3>Migration</h3>
+          <p style={{ color: colors.muted, marginTop: 0 }}>
+            Copy objects between MSP shared storage and a BYO bucket. Use cautiously; long-running operations may take time.
+          </p>
+          <div style={{ display: "grid", gap: "0.5rem" }}>
+            <input
+              placeholder="Target bucket (for to_byo)"
+              value={target.bucket || ""}
+              onChange={(e) => setTarget({ ...target, bucket: e.target.value })}
+              style={input(colors)}
+            />
+            <input
+              placeholder="Target region"
+              value={target.region || ""}
+              onChange={(e) => setTarget({ ...target, region: e.target.value })}
+              style={input(colors)}
+            />
+            <input
+              placeholder="Target endpoint (optional)"
+              value={target.endpoint || ""}
+              onChange={(e) => setTarget({ ...target, endpoint: e.target.value })}
+              style={input(colors)}
+            />
+            <input
+              placeholder="Target access key"
+              value={target.access_key || ""}
+              onChange={(e) => setTarget({ ...target, access_key: e.target.value })}
+              style={input(colors)}
+            />
+            <input
+              placeholder="Target secret key"
+              type="password"
+              value={target.secret_key || ""}
+              onChange={(e) => setTarget({ ...target, secret_key: e.target.value })}
+              style={input(colors)}
+            />
+          </div>
+          <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
+            <button style={btn(colors)} onClick={() => migrate("to_byo")}>
+              Migrate to BYO bucket
+            </button>
+            <button style={btn(colors)} onClick={() => migrate("to_msp")}>
+              Migrate to MSP shared
+            </button>
+          </div>
+        </div>
         {status && <p style={{ color: colors.muted }}>{status}</p>}
       </div>
     </div>
