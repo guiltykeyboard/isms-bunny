@@ -1,9 +1,10 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.authz import require_msp_admin
 from app.db import get_session
 from app.deps import get_current_user_jwt
 from app.models import User
@@ -102,3 +103,30 @@ async def admin_update_auth_pref(
         "auth_preference": row.auth_preference,
         "allow_local_fallback": row.allow_local_fallback,
     }
+
+
+@router.get("")
+async def list_users(
+    current: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    require_msp_admin(current.is_msp_admin)
+    result = await session.execute(
+        select(
+            User.id,
+            User.email,
+            User.is_msp_admin,
+            User.auth_preference,
+            User.allow_local_fallback,
+        )
+    )
+    return [
+        {
+            "id": str(r.id),
+            "email": r.email,
+            "is_msp_admin": r.is_msp_admin,
+            "auth_preference": r.auth_preference,
+            "allow_local_fallback": r.allow_local_fallback,
+        }
+        for r in result.fetchall()
+    ]

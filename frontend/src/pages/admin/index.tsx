@@ -7,6 +7,8 @@ export default function AdminIndex() {
     { href: "/admin/providers", label: "Identity Providers" },
     { href: "/admin/webauthn", label: "Passkeys" },
     { href: "/admin/saml-logs", label: "SAML Logs" },
+    { href: "/admin/users", label: "Users" },
+    { href: "/admin/trust-editor", label: "Trust Editor" },
   ];
   return (
     <div style={{ padding: "2rem", fontFamily: "Inter, system-ui, sans-serif" }}>
