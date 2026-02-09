@@ -336,6 +336,30 @@ async def update_tenant_smtp(
     return {"id": str(t.id), "smtp_config": smtp_cfg}
 
 
+@router.get("/{tenant_id}/alerts")
+async def list_alert_prefs(
+    tenant_id: UUID,
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    """
+    List all alert preferences for a tenant (channels, recipients, last_sent_at).
+    """
+    await assert_tenant_access(session, user.id, tenant_id, user.is_msp_admin)
+    res = await session.execute(
+        text(
+            """
+            SELECT alert_type, channel, recipients, last_sent_at
+            FROM tenant_alert_prefs
+            WHERE tenant_id = :tid
+            ORDER BY alert_type
+            """
+        ),
+        {"tid": tenant_id},
+    )
+    return [dict(r) for r in res.mappings().all()]
+
+
 @router.patch("/{tenant_id}/reminders/webhook")
 async def update_tenant_reminder_webhook(
     tenant_id: UUID,
@@ -384,7 +408,12 @@ async def get_alert_pref(
     )
     row = res.mappings().first()
     if not row:
-        return {"alert_type": alert_type, "channel": "webhook", "recipients": [], "last_sent_at": None}
+        return {
+            "alert_type": alert_type,
+            "channel": "webhook",
+            "recipients": [],
+            "last_sent_at": None,
+        }
     return dict(row)
 
 
