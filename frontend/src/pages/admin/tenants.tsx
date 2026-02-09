@@ -38,6 +38,37 @@ export default function TenantsPage() {
     if (data) setParentOptions(data);
   }, [data]);
 
+  const tree = useMemo(() => {
+    if (!data) return [];
+    const byId: Record<string, any> = {};
+    data.forEach((t: any) => (byId[t.id] = { ...t, children: [] }));
+    const roots: any[] = [];
+    Object.values(byId).forEach((t: any) => {
+      if (t.parent_tenant_id && byId[t.parent_tenant_id]) {
+        byId[t.parent_tenant_id].children.push(t);
+      } else {
+        roots.push(t);
+      }
+    });
+    return roots;
+  }, [data]);
+
+  const renderTree = (node: any, depth = 0) => {
+    const indent = { marginLeft: depth * 16 };
+    return (
+      <div key={node.id} style={{ ...indent, padding: "0.25rem 0" }}>
+        <span style={{ fontWeight: 600 }}>{node.name}</span>{" "}
+        <span style={{ color: colors.muted }}>({node.type})</span>
+        <span
+          style={{ color: colors.muted, marginLeft: 8, fontSize: "0.85em" }}
+        >
+          {node.fqdn}
+        </span>
+        {node.children?.map((c: any) => renderTree(c, depth + 1))}
+      </div>
+    );
+  };
+
   return (
     <div
       style={{
@@ -103,6 +134,21 @@ export default function TenantsPage() {
           return [path, t.type, t.id];
         })}
       />
+
+      <div
+        style={{
+          marginTop: "1rem",
+          background: colors.surface,
+          padding: "1rem",
+          borderRadius: 10,
+        }}
+      >
+        <h3>Hierarchy view</h3>
+        <p style={{ color: colors.muted, marginTop: 0 }}>
+          Parent → child nesting for MSP and sub-MSP tenants.
+        </p>
+        {tree.map((t) => renderTree(t))}
+      </div>
     </div>
   );
 }
