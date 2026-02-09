@@ -55,11 +55,11 @@ export default function StorageAdmin() {
     if (!tenant) return;
     setStatus("Migrating… this may take time.");
     try {
-      await apiFetch(`/tenants/${tenant.id}/storage/migrate`, {
+      const res = await apiFetch(`/tenants/${tenant.id}/storage/migrate`, {
         method: "POST",
         body: JSON.stringify({ direction, target }),
       });
-      setStatus("Migration complete.");
+      setStatus(res.detail ? `${res.detail} (copied ${res.copied ?? "n/a"})` : "Migration complete.");
     } catch (e: any) {
       setStatus(e.message || "Migration failed");
     }

@@ -175,8 +175,11 @@ def _iter_keys(client, bucket: str, prefix: str):
 def _copy_prefix(src_cfg: StorageConfig, dst_cfg: StorageConfig, prefix: str):
     src = _s3_client(src_cfg)
     dst = _s3_client(dst_cfg)
+    copied = 0
     for key in _iter_keys(src, src_cfg.bucket, prefix):
         dst.copy({"Bucket": src_cfg.bucket, "Key": key}, dst_cfg.bucket, key)
+        copied += 1
+    return copied
 
 
 @router.post("/{tenant_id}/storage/migrate")
@@ -223,14 +226,14 @@ async def migrate_storage(
                 detail="bucket, region, access_key, secret_key required",
             )
         dst_cfg_dict = {
-        "bucket": target["bucket"],
-        "region": target["region"],
-        "endpoint": target.get("endpoint"),
-        "access_key": target["access_key"],
-        "secret_key": target["secret_key"],
-        "prefix": tenant_prefix,
-        "use_msp_storage": False,
-    }
+            "bucket": target["bucket"],
+            "region": target["region"],
+            "endpoint": target.get("endpoint"),
+            "access_key": target["access_key"],
+            "secret_key": target["secret_key"],
+            "prefix": tenant_prefix,
+            "use_msp_storage": False,
+        }
         src_client = build_storage_client(
             current_cfg or {"use_msp_storage": True},
             tenant_prefix=tenant_prefix,
@@ -243,7 +246,7 @@ async def migrate_storage(
             tenant_type=tenant_type,
             **settings_defaults,
         )
-        _copy_prefix(
+        copied = _copy_prefix(
             src_client.config, dst_client.config, src_client.config.prefix or tenant_prefix
         )
         await session.execute(
@@ -251,6 +254,12 @@ async def migrate_storage(
             .where(Tenant.id == tenant_id)
             .values(storage_config=dst_cfg_dict)
         )
+        await session.commit()
+        return {
+            "detail": "migrated to BYO",
+            "storage_config": dst_cfg_dict,
+            "copied": copied,
+        }
     else:  # to_msp
         src_client = build_storage_client(
             current_cfg or {},
@@ -265,15 +274,18 @@ async def migrate_storage(
             tenant_type=tenant_type,
             **settings_defaults,
         )
-        _copy_prefix(
+        copied = _copy_prefix(
             src_client.config, dst_client.config, src_client.config.prefix or tenant_prefix
         )
         await session.execute(
             sql_update(Tenant).where(Tenant.id == tenant_id).values(storage_config=dst_cfg_dict)
         )
-
-    await session.commit()
-    return {"detail": "migration complete", "direction": direction}
+        await session.commit()
+        return {
+            "detail": "migrated to MSP storage",
+            "storage_config": dst_cfg_dict,
+            "copied": copied,
+        }
 
 
 @router.patch("/{tenant_id}/smtp")
