@@ -91,7 +91,9 @@ def test_task_remind_webhook(monkeypatch):
     client = TestClient(app, headers={"host": settings.default_tenant_fqdn or "localhost"})
     resp = client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
     assert resp.status_code == 200, resp.text
-    assert resp.json()["webhook"] is True
+    body = resp.json()
+    assert body["webhook"] is True
+    assert body.get("last_sent_at")
     assert called and called[0]["url"] == "https://webhook.example/test"
 
     _run(_clear_user(user_id))
@@ -135,7 +137,9 @@ def test_task_remind_email(monkeypatch):
     client = TestClient(app, headers={"host": settings.default_tenant_fqdn or "localhost"})
     resp = client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
     assert resp.status_code == 200, resp.text
-    assert resp.json()["email"] is True
+    body = resp.json()
+    assert body["email"] is True
+    assert body.get("last_sent_at")
     assert sent and sent[0]["to"] == "ops@example.com"
 
     _run(_clear_user(user_id))

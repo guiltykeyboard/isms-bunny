@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Annotated
 
 import requests
@@ -142,16 +143,17 @@ async def send_reminders(
     if channel in {"webhook", "both"} and not sent_webhook and webhook_url is None:
         raise HTTPException(status_code=400, detail="No reminder webhook configured")
 
+    now = datetime.now(timezone.utc)
     await session.execute(
         text(
             """
             INSERT INTO tenant_alert_prefs (tenant_id, alert_type, last_sent_at)
-            VALUES (:tid, 'task_due', now())
+            VALUES (:tid, 'task_due', :now)
             ON CONFLICT (tenant_id, alert_type)
-            DO UPDATE SET last_sent_at = now()
+            DO UPDATE SET last_sent_at = :now
             """
         ),
-        {"tid": tid},
+        {"tid": tid, "now": now},
     )
     await session.commit()
 
@@ -160,6 +162,7 @@ async def send_reminders(
         "count": len(tasks),
         "webhook": sent_webhook,
         "email": sent_email,
+        "last_sent_at": now.isoformat(),
     }
 
 
