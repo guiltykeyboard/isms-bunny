@@ -210,3 +210,5 @@ COMMENT ON TABLE trust_pages IS 'Public-facing trust center content per tenant';
 COMMENT ON TABLE audit_logs IS 'Immutable-ish audit log; consider shipping to external sink';
 -- Enable pgcrypto for gen_random_uuid
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- Enable citext for case-insensitive email column
+CREATE EXTENSION IF NOT EXISTS "citext";
