@@ -103,28 +103,54 @@ async def main():
             "secret_key": settings.s3_secret_access_key,
         }
 
-        if args.direction == "to_byo":
-            if not all([args.bucket, args.region, args.access_key, args.secret_key]):
-                raise SystemExit("BYO target bucket/region/access/secret are required for to_byo")
-            dst_cfg = {
-                "bucket": args.bucket,
-                "region": args.region,
-                "endpoint": args.endpoint or None,
-                "access_key": args.access_key,
-                "secret_key": args.secret_key,
-                "prefix": tenant_prefix,
-                "use_msp_storage": False,
-            }
-            src_client = build_storage_client(current_cfg or {"use_msp_storage": True}, **msp_default, tenant_prefix=tenant_prefix, tenant_type=tenant_type)
-            dst_client = build_storage_client(dst_cfg, **msp_default, tenant_prefix=tenant_prefix, tenant_type=tenant_type)
-            copy_prefix(src_client.config, dst_client.config, src_client.config.prefix or tenant_prefix)
-            await update_tenant_storage(session, args.tenant, dst_cfg)
-        else:  # to_msp
-            dst_cfg_dict = {"use_msp_storage": True}
-            src_client = build_storage_client(current_cfg or {}, **msp_default, tenant_prefix=tenant_prefix, tenant_type=tenant_type)
-            dst_client = build_storage_client(dst_cfg_dict, **msp_default, tenant_prefix=tenant_prefix, tenant_type=tenant_type)
-            copy_prefix(src_client.config, dst_client.config, src_client.config.prefix or tenant_prefix)
-            await update_tenant_storage(session, args.tenant, dst_cfg_dict)
+    if args.direction == "to_byo":
+        if not all([args.bucket, args.region, args.access_key, args.secret_key]):
+            raise SystemExit(
+                "BYO target bucket/region/access/secret are required for to_byo"
+            )
+        dst_cfg = {
+            "bucket": args.bucket,
+            "region": args.region,
+            "endpoint": args.endpoint or None,
+            "access_key": args.access_key,
+            "secret_key": args.secret_key,
+            "prefix": tenant_prefix,
+            "use_msp_storage": False,
+        }
+        src_client = build_storage_client(
+            current_cfg or {"use_msp_storage": True},
+            tenant_prefix=tenant_prefix,
+            tenant_type=tenant_type,
+            **msp_default,
+        )
+        dst_client = build_storage_client(
+            dst_cfg,
+            tenant_prefix=tenant_prefix,
+            tenant_type=tenant_type,
+            **msp_default,
+        )
+        copy_prefix(
+            src_client.config, dst_client.config, src_client.config.prefix or tenant_prefix
+        )
+        await update_tenant_storage(session, args.tenant, dst_cfg)
+    else:  # to_msp
+        dst_cfg_dict = {"use_msp_storage": True}
+        src_client = build_storage_client(
+            current_cfg or {},
+            tenant_prefix=tenant_prefix,
+            tenant_type=tenant_type,
+            **msp_default,
+        )
+        dst_client = build_storage_client(
+            dst_cfg_dict,
+            tenant_prefix=tenant_prefix,
+            tenant_type=tenant_type,
+            **msp_default,
+        )
+        copy_prefix(
+            src_client.config, dst_client.config, src_client.config.prefix or tenant_prefix
+        )
+        await update_tenant_storage(session, args.tenant, dst_cfg_dict)
 
     await engine.dispose()
 
