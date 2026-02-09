@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.authz import enforce_current_tenant, require_msp_admin
@@ -34,7 +34,8 @@ async def trust_content(session: Annotated[AsyncSession, Depends(get_session)]):
         raise HTTPException(status_code=404, detail="Tenant not resolved")
     result = await session.execute(
         """
-        SELECT overview_md, policies, attestations, subprocessors, status_banner
+        SELECT overview_md, policies, attestations, subprocessors, status_banner,
+               last_generated_at, last_generated_by, gated_policies, gated_attestations
         FROM trust_pages
         WHERE tenant_id = :tid
         """,
@@ -43,7 +44,17 @@ async def trust_content(session: Annotated[AsyncSession, Depends(get_session)]):
     row = result.fetchone()
     if not row:
         return {"tenant": str(tenant_id), "content": None}
-    keys = ["overview_md", "policies", "attestations", "subprocessors", "status_banner"]
+    keys = [
+        "overview_md",
+        "policies",
+        "attestations",
+        "subprocessors",
+        "status_banner",
+        "last_generated_at",
+        "last_generated_by",
+        "gated_policies",
+        "gated_attestations",
+    ]
     return {"tenant": str(tenant_id), **dict(zip(keys, row, strict=False))}
 
 
@@ -51,8 +62,7 @@ async def trust_content(session: Annotated[AsyncSession, Depends(get_session)]):
 async def public_trust_page(fqdn: str, session: Annotated[AsyncSession, Depends(get_session)]):
     result = await session.execute(
         """
-        SELECT t.id, t.name, tp.overview_md, tp.policies, tp.attestations,
-               tp.subprocessors, tp.status_banner
+        SELECT t.id, t.name, tp.overview_md, tp.subprocessors, tp.status_banner
         FROM trust_pages tp
         JOIN tenants t ON tp.tenant_id = t.id
         WHERE lower(t.fqdn) = lower(:fqdn)
@@ -66,8 +76,6 @@ async def public_trust_page(fqdn: str, session: Annotated[AsyncSession, Depends(
         "tenant_id",
         "tenant_name",
         "overview_md",
-        "policies",
-        "attestations",
         "subprocessors",
         "status_banner",
     ]
@@ -85,14 +93,18 @@ async def update_trust_content(
         raise HTTPException(status_code=400, detail="Tenant not resolved")
     enforce_current_tenant(tenant_id)
     require_msp_admin(user.is_msp_admin)
-    stmt = update(Tenant.__table__.metadata.tables["trust_pages"]).where(
-        Tenant.__table__.metadata.tables["trust_pages"].c.tenant_id == tenant_id
-    ).values(
-        overview_md=payload.get("overview_md"),
-        policies=payload.get("policies", []),
-        attestations=payload.get("attestations", []),
-        subprocessors=payload.get("subprocessors", []),
-        status_banner=payload.get("status_banner", {}),
+    stmt = (
+        update(Tenant.__table__.metadata.tables["trust_pages"])
+        .where(Tenant.__table__.metadata.tables["trust_pages"].c.tenant_id == tenant_id)
+        .values(
+            overview_md=payload.get("overview_md"),
+            policies=payload.get("policies", []),
+            attestations=payload.get("attestations", []),
+            subprocessors=payload.get("subprocessors", []),
+            status_banner=payload.get("status_banner", {}),
+            gated_policies=payload.get("gated_policies", []),
+            gated_attestations=payload.get("gated_attestations", []),
+        )
     )
     await session.execute(stmt)
     await session.commit()
@@ -130,9 +142,48 @@ async def generate_trust_content(
     enforce_current_tenant(tenant_id)
     require_msp_admin(user.is_msp_admin)
     overview = _collect_public_isms_docs(Path("."))
-    stmt = update(Tenant.__table__.metadata.tables["trust_pages"]).where(
-        Tenant.__table__.metadata.tables["trust_pages"].c.tenant_id == tenant_id
-    ).values(overview_md=overview)
+    stmt = (
+        update(Tenant.__table__.metadata.tables["trust_pages"])
+        .where(Tenant.__table__.metadata.tables["trust_pages"].c.tenant_id == tenant_id)
+        .values(
+            overview_md=overview,
+            last_generated_at=text("now()"),
+            last_generated_by=user.id,
+        )
+    )
     await session.execute(stmt)
     await session.commit()
     return {"detail": "generated", "overview_md": overview}
+
+
+@router.post("/trust/request-access")
+async def request_trust_access(
+    payload: dict, session: Annotated[AsyncSession, Depends(get_session)]
+):
+    tenant_id = current_tenant()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    name = (payload.get("name") or "").strip()
+    email = (payload.get("email") or "").strip().lower()
+    company = (payload.get("company") or "").strip()
+    justification = (payload.get("justification") or "").strip()
+    if not all([name, email, company, justification]):
+        raise HTTPException(status_code=400, detail="All fields are required")
+    await session.execute(
+        text(
+            """
+            INSERT INTO trust_access_requests
+                (tenant_id, name, email, company, justification)
+            VALUES (:tid, :name, :email, :company, :justification)
+            """
+        ),
+        {
+            "tid": tenant_id,
+            "name": name,
+            "email": email,
+            "company": company,
+            "justification": justification,
+        },
+    )
+    await session.commit()
+    return {"detail": "request received"}
