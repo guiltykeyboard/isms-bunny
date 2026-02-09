@@ -1,13 +1,13 @@
-import asyncio
 import uuid
 from typing import List
 
+import pytest
 import requests
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
 from app.config import get_settings
-from app.db import SessionLocal, engine
+from app.db import SessionLocal
 from app.main import app
 
 
@@ -44,17 +44,14 @@ async def _clear_user(user_id: uuid.UUID):
         await session.commit()
 
 
-def _run(coro):
-    # Use a fresh loop and ensure async engine is disposed before loop teardown
-    result = asyncio.run(coro)
-    asyncio.run(engine.dispose())
-    return result
-
-
 def test_task_remind_webhook(monkeypatch):
     settings = get_settings()
     user_id = uuid.uuid4()
-    _run(_seed_user_and_membership(user_id))
+    pytest.run(asyncio=True)
+
+    import asyncio
+
+    asyncio.get_event_loop().run_until_complete(_seed_user_and_membership(user_id))
 
     called: List[dict] = []
 
