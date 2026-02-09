@@ -19,6 +19,7 @@ export default function Login() {
   const [recommendation, setRecommendation] = useState<"local" | "oidc" | "saml" | string>("local");
   const [enforceExternal, setEnforceExternal] = useState(false);
   const [allowLocalFallback, setAllowLocalFallback] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     apiFetch("/providers/public")
@@ -38,10 +39,16 @@ export default function Login() {
       setEnforceExternal(res.enforce_external);
       setAllowLocalFallback(res.allow_local_fallback);
       setStatus(null);
+      // Auto-flow: if external is enforced, redirect immediately; if local is recommended, show password form.
       if (res.enforce_external && res.providers?.length) {
         const first = res.providers[0];
         if (first.type === "oidc") return startOidc(first.name);
         if (first.type === "saml") return startSaml(first.name);
+      }
+      if (res.recommendation === "local") {
+        setShowPassword(true);
+      } else {
+        setShowPassword(false);
       }
     } catch (e: any) {
       setStatus(e.message || "Failed to resolve sign-in method");
@@ -148,17 +155,19 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="password"
           style={input(colors)}
+          disabled={!showPassword && enforceExternal}
         />
         <input
           value={totp}
           onChange={(e) => setTotp(e.target.value)}
           placeholder="TOTP (if enabled)"
           style={input(colors)}
+          disabled={!showPassword && enforceExternal}
         />
         <button style={btn(colors)} onClick={determineMethod}>
           Continue
         </button>
-        {status === null && (recommendation === "local" || allowLocalFallback || !enforceExternal) && (
+        {status === null && showPassword && (recommendation === "local" || allowLocalFallback || !enforceExternal) && (
           <>
             <button style={btn(colors)} onClick={loginPassword}>
               Sign in with password
