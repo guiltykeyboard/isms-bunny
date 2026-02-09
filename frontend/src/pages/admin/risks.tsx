@@ -99,6 +99,12 @@ export default function RisksPage() {
       >
         Download Risks CSV
       </a>
+      <a
+        href="/reports/risks.pdf"
+        style={{ color: colors.primary, fontWeight: 600, marginLeft: "1rem" }}
+      >
+        Download Risks PDF
+      </a>
 
       <section style={{ marginTop: "1rem" }}>
         <h3>Assets</h3>

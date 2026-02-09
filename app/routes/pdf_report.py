@@ -69,3 +69,36 @@ async def soa_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": "attachment; filename=soa.pdf"},
     )
+
+
+@router.get("/risks.pdf")
+async def risks_pdf(
+    session: AsyncSession = Depends(get_session),
+    user: object = Depends(get_current_user_jwt),
+):
+    tid = current_tenant()
+    if not tid:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    res = await session.execute(
+        text(
+            """
+            SELECT title, threat, vulnerability, impact, likelihood, status, treatment
+            FROM risks
+            WHERE tenant_id=:tid
+            ORDER BY created_at DESC
+            """
+        ),
+        {"tid": tid},
+    )
+    rows = res.mappings().all()
+    body = [
+        f"{r['title']} [status: {r['status']}] threat: {r['threat'] or '-'} vuln: {r['vulnerability'] or '-'} "
+        f"impact {r['impact'] or '-'} likelihood {r['likelihood'] or '-'} treatment: {r['treatment'] or '-'}"
+        for r in rows
+    ]
+    pdf_bytes = _simple_pdf("Risk Register", body or ["No risks recorded."])
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=risks.pdf"},
+    )
