@@ -25,6 +25,51 @@ async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
     return result.scalar_one_or_none()
 
 
+@router.get("/method")
+async def auth_method(
+    email: str,
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    tenant_id = current_tenant()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    user = await get_user_by_email(session, email.lower().strip())
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    providers = await session.execute(
+        text(
+            """
+            SELECT id, name, type
+            FROM idp_connections
+            WHERE tenant_id=:tid AND enabled=true
+            ORDER BY name
+            """
+        ),
+        {"tid": tenant_id},
+    )
+    prov_list = [dict(r) for r in providers.mappings().all()]
+    has_idp = len(prov_list) > 0
+    recommendation = "local"
+    enforce_external = False
+    allow_local = bool(user.allow_local_fallback)
+    if has_idp:
+        first_type = prov_list[0]["type"]
+        if user.auth_preference == "external" and not allow_local:
+            recommendation = first_type
+            enforce_external = True
+        elif user.auth_preference == "local":
+            recommendation = "local"
+        else:
+            recommendation = first_type
+    return {
+        "recommendation": recommendation,
+        "enforce_external": enforce_external,
+        "allow_local_fallback": allow_local,
+        "auth_preference": user.auth_preference,
+        "providers": prov_list,
+    }
+
+
 @router.post("/login")
 async def login(
     response: Response,

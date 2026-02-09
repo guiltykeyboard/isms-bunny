@@ -16,6 +16,9 @@ export default function Login() {
   const [totp, setTotp] = useState("");
   const [providers, setProviders] = useState<Provider[]>([]);
   const [status, setStatus] = useState<string | null>(null);
+  const [recommendation, setRecommendation] = useState<"local" | "oidc" | "saml" | string>("local");
+  const [enforceExternal, setEnforceExternal] = useState(false);
+  const [allowLocalFallback, setAllowLocalFallback] = useState(false);
 
   useEffect(() => {
     apiFetch("/providers/public")
@@ -23,6 +26,27 @@ export default function Login() {
       .catch(() => setProviders([]));
   }, []);
 
+  const determineMethod = async () => {
+    if (!email) {
+      setStatus("Enter email first");
+      return;
+    }
+    setStatus("Checking sign-in method…");
+    try {
+      const res = await apiFetch(`/auth/method?email=${encodeURIComponent(email)}`);
+      setRecommendation(res.recommendation);
+      setEnforceExternal(res.enforce_external);
+      setAllowLocalFallback(res.allow_local_fallback);
+      setStatus(null);
+      if (res.enforce_external && res.providers?.length) {
+        const first = res.providers[0];
+        if (first.type === "oidc") return startOidc(first.name);
+        if (first.type === "saml") return startSaml(first.name);
+      }
+    } catch (e: any) {
+      setStatus(e.message || "Failed to resolve sign-in method");
+    }
+  };
   const loginPassword = async () => {
     setStatus("Signing in…");
     try {
@@ -131,27 +155,35 @@ export default function Login() {
           placeholder="TOTP (if enabled)"
           style={input(colors)}
         />
-        <button style={btn(colors)} onClick={loginPassword}>
-          Sign in with password
+        <button style={btn(colors)} onClick={determineMethod}>
+          Continue
         </button>
-        <button style={btn(colors)} onClick={loginPasskey}>
-          Sign in with passkey
-        </button>
-        {(providers.some(isOidc) || providers.some(isSaml)) && (
-          <div>
-            <p style={{ color: colors.muted, marginBottom: "0.3rem" }}>Single Sign-On</p>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              {providers.filter(isOidc).map((p) => (
-                <button key={p.id} style={btn(colors)} onClick={() => startOidc(p.name)}>
-                  {p.name} (OIDC)
-                </button>
-              ))}
-              {providers.filter(isSaml).map((p) => (
-                <button key={p.id} style={btn(colors)} onClick={() => startSaml(p.name)}>
-                  {p.name} (SAML)
-                </button>
-              ))}
-            </div>
+        {status === null && (recommendation === "local" || allowLocalFallback || !enforceExternal) && (
+          <>
+            <button style={btn(colors)} onClick={loginPassword}>
+              Sign in with password
+            </button>
+            <button style={btn(colors)} onClick={loginPasskey}>
+              Sign in with passkey
+            </button>
+          </>
+        )}
+        {(status === null && providers.some(isOidc)) && (
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            {providers.filter(isOidc).map((p) => (
+              <button key={p.id} style={btn(colors)} onClick={() => startOidc(p.name)}>
+                {p.name} (OIDC)
+              </button>
+            ))}
+          </div>
+        )}
+        {(status === null && providers.some(isSaml)) && (
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            {providers.filter(isSaml).map((p) => (
+              <button key={p.id} style={btn(colors)} onClick={() => startSaml(p.name)}>
+                {p.name} (SAML)
+              </button>
+            ))}
           </div>
         )}
       </div>
