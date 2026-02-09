@@ -30,6 +30,8 @@ export default function EvidencePage() {
   );
   const [form, setForm] = useState({ name: "", url: "", s3_key: "" });
   const [status, setStatus] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,15 +41,36 @@ export default function EvidencePage() {
     }
     setStatus("Saving…");
     try {
+      let s3Key = form.s3_key;
+      if (file) {
+        setUploading(true);
+        const presign = await apiFetch("/upload/evidence", {
+          method: "POST",
+          body: JSON.stringify({
+            filename: file.name,
+            content_type: file.type || "application/octet-stream",
+          }),
+        });
+        await fetch(presign.upload_url, {
+          method: "PUT",
+          headers: { "Content-Type": file.type || "application/octet-stream" },
+          body: file,
+        });
+        s3Key = presign.s3_key;
+        setUploading(false);
+      }
       await apiFetch(`/controls/${selected}/evidence`, {
         method: "POST",
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, s3_key: s3Key }),
       });
       setForm({ name: "", url: "", s3_key: "" });
+      setFile(null);
       mutate();
       setStatus("Saved");
     } catch (err: any) {
       setStatus(err.message || "Save failed");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -109,6 +132,11 @@ export default function EvidencePage() {
             <button style={btn(colors)} type="submit">
               Add evidence
             </button>
+            <input
+              type="file"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+            />
+            {uploading && <p style={{ color: colors.muted }}>Uploading…</p>}
           </form>
           {status && <p style={{ color: colors.muted }}>{status}</p>}
           <div style={{ marginTop: "1rem", display: "grid", gap: "0.5rem" }}>

@@ -10,6 +10,7 @@ from app.routes import (
     controls,
     risks,
     reports,
+    upload,
     saml_logs,
     setup,
     tenants,
@@ -52,3 +53,4 @@ app.include_router(saml_logs.router)
 app.include_router(controls.router)
 app.include_router(risks.router)
 app.include_router(reports.router)
+app.include_router(upload.router)
