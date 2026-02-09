@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     s3_access_key_id: str = Field(default="changeme")
     s3_secret_access_key: str = Field(default="changeme")
 
+    # MSP default SMTP (tenants can override)
+    smtp_host: str | None = Field(default=None)
+    smtp_port: int | None = Field(default=587)
+    smtp_username: str | None = Field(default=None)
+    smtp_password: str | None = Field(default=None)
+    smtp_use_tls: bool = Field(default=True)
+
     oidc_allowed_providers: list[str] = Field(default_factory=lambda: ["okta", "azure", "google"])
     saml_enabled: bool = Field(default=True)
 

@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.context import current_tenant
 from app.db import get_session
 from app.deps import get_current_user_jwt
+from app.emailer import resolve_smtp_config, send_email
 from app.models import Tenant, User
 
 router = APIRouter(tags=["trust"])
@@ -245,15 +246,36 @@ async def update_trust_request(
     if not row:
         raise HTTPException(status_code=404, detail="Request not found")
     await session.commit()
-    await _notify_trust_webhook(dict(row))
+    await _notify_trust_webhook(dict(row), tenant_id)
+    if new_status == "approved":
+        await _notify_email(dict(row), session, tenant_id)
     return dict(row)
 
 
-async def _notify_trust_webhook(payload: dict):
+async def _notify_trust_webhook(payload: dict, tenant_id):
     if not settings.trust_webhook_url:
         return
     try:
         async with httpx.AsyncClient(timeout=5) as client:
-            await client.post(settings.trust_webhook_url, json=payload)
+            await client.post(
+                settings.trust_webhook_url,
+                json={"tenant_id": str(tenant_id), **payload},
+            )
     except Exception:
         return
+
+
+async def _notify_email(payload: dict, session: AsyncSession, tenant_id):
+    tenant_row = await session.execute(
+        text("SELECT smtp_config FROM tenants WHERE id=:tid"), {"tid": tenant_id}
+    )
+    tenant_cfg = (tenant_row.fetchone() or [None])[0]
+    smtp_cfg = resolve_smtp_config(tenant_cfg)
+    subj = "Trust access approved"
+    body = (
+        f"Hello {payload.get('name')},\\n\\n"
+        "Your request for gated trust documents has been approved. "
+        "If you have not yet received download instructions, please reply to this email.\\n\\n"
+        "Thank you."
+    )
+    send_email(smtp_cfg, payload.get("email"), subj, body)

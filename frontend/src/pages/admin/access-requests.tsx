@@ -32,6 +32,19 @@ export default function AccessRequests() {
     }
   };
 
+  const save = async (row: RequestRow) => {
+    setStatus("Saving…");
+    try {
+      await apiFetch(`/trust/requests/${row.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: row.status, note: row.note }),
+      });
+      setStatus("Saved");
+    } catch (e: any) {
+      setStatus(e.message || "Save failed");
+    }
+  };
+
   useEffect(() => {
     load();
   }, []);
