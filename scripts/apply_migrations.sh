@@ -39,5 +39,8 @@ fi
 if [ -f db/migrations/012_trust_meta.sql ]; then
   psql "${DB_URL}" -f db/migrations/012_trust_meta.sql
 fi
+if [ -f db/migrations/013_trust_request_status.sql ]; then
+  psql "${DB_URL}" -f db/migrations/013_trust_request_status.sql
+fi
 
 echo "Migrations applied."

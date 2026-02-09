@@ -10,6 +10,7 @@ type RequestRow = {
   justification: string;
   status: string;
   created_at: string;
+  note?: string;
 };
 
 export default function AccessRequests() {
@@ -49,9 +50,33 @@ export default function AccessRequests() {
             <div style={{ color: colors.muted, marginTop: "0.3rem" }}>
               Status: {r.status} • {new Date(r.created_at).toLocaleString()}
             </div>
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+              <select
+                value={r.status}
+                onChange={(e) => updateRow(r.id, { status: e.target.value })}
+                style={input(colors)}
+              >
+                <option value="new">new</option>
+                <option value="approved">approved</option>
+                <option value="denied">denied</option>
+              </select>
+              <input
+                placeholder="note (optional)"
+                value={r.note || ""}
+                onChange={(e) => updateRow(r.id, { note: e.target.value })}
+                style={input(colors)}
+              />
+              <button style={btn(colors)} onClick={() => save(r)}>
+                Save
+              </button>
+            </div>
           </div>
         ))}
       </div>
     </div>
   );
+}
+
+function updateRow(id: string, updates: Partial<RequestRow>) {
+  setRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...updates } : row)));
 }

@@ -1,17 +1,20 @@
 from pathlib import Path
 from typing import Annotated
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.authz import enforce_current_tenant, require_msp_admin
+from app.config import get_settings
 from app.context import current_tenant
 from app.db import get_session
 from app.deps import get_current_user_jwt
 from app.models import Tenant, User
 
 router = APIRouter(tags=["trust"])
+settings = get_settings()
 
 
 @router.get("/trust")
@@ -210,3 +213,47 @@ async def list_trust_requests(
         {"tid": tenant_id},
     )
     return [dict(r) for r in rows.mappings().all()]
+
+
+@router.patch("/trust/requests/{request_id}")
+async def update_trust_request(
+    request_id: str,
+    payload: dict,
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    tenant_id = current_tenant()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    require_msp_admin(user.is_msp_admin)
+    new_status = payload.get("status")
+    note = payload.get("note")
+    if new_status not in {"new", "approved", "denied"}:
+        raise HTTPException(status_code=400, detail="status must be new|approved|denied")
+    result = await session.execute(
+        text(
+            """
+            UPDATE trust_access_requests
+            SET status=:status, note=:note, updated_at=now()
+            WHERE id=:rid AND tenant_id=:tid
+            RETURNING id, name, email, company, justification, status
+            """
+        ),
+        {"status": new_status, "note": note, "rid": request_id, "tid": tenant_id},
+    )
+    row = result.mappings().first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Request not found")
+    await session.commit()
+    await _notify_trust_webhook(dict(row))
+    return dict(row)
+
+
+async def _notify_trust_webhook(payload: dict):
+    if not settings.trust_webhook_url:
+        return
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            await client.post(settings.trust_webhook_url, json=payload)
+    except Exception:
+        return

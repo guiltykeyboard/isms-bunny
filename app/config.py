@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     oidc_allowed_providers: list[str] = Field(default_factory=lambda: ["okta", "azure", "google"])
     saml_enabled: bool = Field(default=True)
 
+    trust_webhook_url: str | None = Field(default=None)
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
