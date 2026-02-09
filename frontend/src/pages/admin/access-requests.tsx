@@ -20,6 +20,7 @@ export default function AccessRequests() {
   const colors = palette[resolveMode(mode)];
   const [rows, setRows] = useState<RequestRow[]>([]);
   const [status, setStatus] = useState<string | null>(null);
+  const [filters, setFilters] = useState({ status: "all" });
 
   const load = async () => {
     setStatus("Loading requests…");
@@ -53,13 +54,28 @@ export default function AccessRequests() {
     load();
   }, []);
 
+  const filtered = rows.filter((r) => (filters.status === "all" ? true : r.status === filters.status));
+
   return (
     <div style={{ padding: "2rem", minHeight: "100vh", background: colors.background, color: colors.text }}>
       <h1>Trust Access Requests</h1>
       <p style={{ color: colors.muted }}>View public users requesting gated documents.</p>
       {status && <p style={{ color: colors.muted }}>{status}</p>}
+      <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
+        <label style={{ color: colors.muted }}>Filter</label>
+        <select
+          value={filters.status}
+          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+          style={input(colors)}
+        >
+          <option value="all">all</option>
+          <option value="new">new</option>
+          <option value="approved">approved</option>
+          <option value="denied">denied</option>
+        </select>
+      </div>
       <div style={{ marginTop: "1rem", display: "grid", gap: "0.75rem" }}>
-        {rows.map((r) => (
+        {filtered.map((r) => (
           <div key={r.id} style={{ background: colors.surface, padding: "0.75rem", borderRadius: 10 }}>
             <div style={{ fontWeight: 600 }}>{r.name} ({r.company})</div>
             <div style={{ color: colors.muted }}>{r.email}</div>
