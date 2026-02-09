@@ -32,6 +32,7 @@ export default function EvidencePage() {
   const [status, setStatus] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,12 +157,33 @@ export default function EvidencePage() {
                 <div style={{ color: colors.muted, fontSize: "0.85em" }}>
                   {new Date(ev.added_at).toLocaleString()}
                 </div>
+                {ev.s3_key && (
+                  <button
+                    style={btn(colors)}
+                    onClick={async () => {
+                      const res = await apiFetch("/upload/evidence/get", {
+                        method: "POST",
+                        body: JSON.stringify({ s3_key: ev.s3_key }),
+                      });
+                      setDownloadUrl(res.download_url);
+                    }}
+                  >
+                    Get download link
+                  </button>
+                )}
               </div>
             ))}
             {!items?.length && (
               <div style={{ color: colors.muted }}>No evidence yet.</div>
             )}
           </div>
+          {downloadUrl && (
+            <div style={{ marginTop: "0.75rem" }}>
+              <a href={downloadUrl} style={{ color: colors.primary }}>
+                Download link (expires soon)
+              </a>
+            </div>
+          )}
         </>
       )}
     </div>

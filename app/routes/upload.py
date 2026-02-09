@@ -48,3 +48,38 @@ async def presign_evidence(
         ExpiresIn=900,
     )
     return {"upload_url": url, "s3_key": key}
+
+
+@router.post("/evidence/get")
+async def presign_evidence_download(
+    payload: dict,
+    session: Annotated[AsyncSession, Depends(get_session)],
+    user: Annotated[object, Depends(get_current_user_jwt)],
+):
+    tenant_id = current_tenant()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    s3_key = payload.get("s3_key")
+    if not s3_key:
+        raise HTTPException(status_code=400, detail="s3_key required")
+
+    defaults = {
+        "default_bucket": settings.s3_bucket,
+        "default_region": settings.s3_region,
+        "default_endpoint": settings.s3_endpoint,
+        "default_access_key": settings.s3_access_key_id,
+        "default_secret": settings.s3_secret_access_key,
+    }
+    storage_cfg = payload.get("storage_config") or {"use_msp_storage": True}
+    client = build_storage_client(
+        storage_cfg,
+        tenant_prefix=str(tenant_id),
+        tenant_type=None,
+        **defaults,
+    )
+    url = client.client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": client.config.bucket, "Key": s3_key},
+        ExpiresIn=600,
+    )
+    return {"download_url": url}
