@@ -42,6 +42,15 @@ CREATE TABLE IF NOT EXISTS evidence (
 );
 CREATE INDEX IF NOT EXISTS evidence_control_tenant_idx ON evidence(tenant_id, control_id, added_at DESC);
 
+-- Backfill evidence columns if the legacy table from 001_init exists without them
+ALTER TABLE evidence
+    ADD COLUMN IF NOT EXISTS control_id uuid REFERENCES controls(id) ON DELETE CASCADE,
+    ADD COLUMN IF NOT EXISTS name text,
+    ADD COLUMN IF NOT EXISTS url text,
+    ADD COLUMN IF NOT EXISTS s3_key text,
+    ADD COLUMN IF NOT EXISTS added_by uuid REFERENCES users(id),
+    ADD COLUMN IF NOT EXISTS added_at timestamptz NOT NULL DEFAULT now();
+
 -- Tasks linked to controls/risks (risks to be added later)
 CREATE TABLE IF NOT EXISTS tasks (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
