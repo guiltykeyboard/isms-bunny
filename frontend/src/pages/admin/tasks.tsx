@@ -31,6 +31,7 @@ export default function TasksPage() {
     status: "open",
   });
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [filter, setFilter] = useState<string>("all");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,47 +125,85 @@ export default function TasksPage() {
         </button>
       </form>
 
+      <div
+        style={{
+          marginTop: "1rem",
+          display: "flex",
+          gap: "0.5rem",
+          alignItems: "center",
+        }}
+      >
+        <span style={{ color: colors.muted }}>Filter:</span>
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          style={input(colors)}
+        >
+          <option value="all">all</option>
+          <option value="open">open</option>
+          <option value="in_progress">in_progress</option>
+          <option value="done">done</option>
+        </select>
+      </div>
+
       <div style={{ marginTop: "1rem", display: "grid", gap: "0.5rem" }}>
-        {(data || []).map((t) => (
-          <div
-            key={t.id}
-            style={{
-              background: colors.surface,
-              padding: "0.7rem",
-              borderRadius: 10,
-            }}
-          >
-            <div style={{ fontWeight: 700 }}>{t.title}</div>
-            <div style={{ color: colors.muted }}>
-              Status{" "}
-              <select
-                value={t.status}
-                onChange={async (e) => {
-                  await apiFetch(`/tasks/${t.id}`, {
-                    method: "PATCH",
-                    body: JSON.stringify({ status: e.target.value }),
-                  });
-                  mutate();
+        {(data || [])
+          .filter((t) => (filter === "all" ? true : t.status === filter))
+          .map((t) => {
+            const overdue =
+              t.due_date &&
+              !["done"].includes(t.status) &&
+              new Date(t.due_date).getTime() < new Date().setHours(0, 0, 0, 0);
+            return (
+              <div
+                key={t.id}
+                style={{
+                  background: colors.surface,
+                  padding: "0.7rem",
+                  borderRadius: 10,
                 }}
-                style={input(colors)}
               >
-                <option value="open">open</option>
-                <option value="in_progress">in_progress</option>
-                <option value="done">done</option>
-              </select>{" "}
-              {t.due_date ? `• due ${t.due_date}` : ""}
-            </div>
-            {t.control_id && (
-              <div style={{ color: colors.muted }}>Control: {t.control_id}</div>
-            )}
-            {t.risk_id && (
-              <div style={{ color: colors.muted }}>Risk: {t.risk_id}</div>
-            )}
-            {t.assignee && (
-              <div style={{ color: colors.muted }}>Assignee: {t.assignee}</div>
-            )}
-          </div>
-        ))}
+                <div style={{ fontWeight: 700 }}>{t.title}</div>
+                <div style={{ color: colors.muted }}>
+                  Status{" "}
+                  <select
+                    value={t.status}
+                    onChange={async (e) => {
+                      await apiFetch(`/tasks/${t.id}`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ status: e.target.value }),
+                      });
+                      mutate();
+                    }}
+                    style={input(colors)}
+                  >
+                    <option value="open">open</option>
+                    <option value="in_progress">in_progress</option>
+                    <option value="done">done</option>
+                  </select>{" "}
+                  {t.due_date ? `• due ${t.due_date}` : ""}
+                  {overdue && (
+                    <span style={{ color: "tomato", marginLeft: 6 }}>
+                      OVERDUE
+                    </span>
+                  )}
+                </div>
+                {t.control_id && (
+                  <div style={{ color: colors.muted }}>
+                    Control: {t.control_id}
+                  </div>
+                )}
+                {t.risk_id && (
+                  <div style={{ color: colors.muted }}>Risk: {t.risk_id}</div>
+                )}
+                {t.assignee && (
+                  <div style={{ color: colors.muted }}>
+                    Assignee: {t.assignee}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         {!data?.length && (
           <div style={{ color: colors.muted }}>No tasks yet.</div>
         )}
