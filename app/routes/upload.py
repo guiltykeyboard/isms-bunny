@@ -3,11 +3,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.context import current_tenant
 from app.db import get_session
 from app.deps import get_current_user_jwt
 from app.storage import build_storage_client
-from app.config import get_settings
 
 router = APIRouter(prefix="/upload", tags=["upload"])
 settings = get_settings()
@@ -44,7 +44,11 @@ async def presign_evidence(
     key = f"{client.config.prefix or tenant_id}/evidence/{filename}"
     url = client.client.generate_presigned_url(
         "put_object",
-        Params={"Bucket": client.config.bucket, "Key": key, "ContentType": payload.get("content_type", "application/octet-stream")},
+        Params={
+            "Bucket": client.config.bucket,
+            "Key": key,
+            "ContentType": payload.get("content_type", "application/octet-stream"),
+        },
         ExpiresIn=900,
     )
     return {"upload_url": url, "s3_key": key}

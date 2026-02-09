@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy import text
@@ -25,8 +27,8 @@ def _to_csv(rows, headers):
 
 @router.get("/soa.csv")
 async def soa_csv(
-    session: AsyncSession = Depends(get_session),
-    user: object = Depends(get_current_user_jwt),
+    session: Annotated[AsyncSession, Depends(get_session)],
+    user: Annotated[object, Depends(get_current_user_jwt)],
 ):
     tid = current_tenant()
     if not tid:
@@ -34,7 +36,8 @@ async def soa_csv(
     res = await session.execute(
         text(
             """
-            SELECT c.standard, c.ref, c.title, cs.status, cs.rationale, cs.owner_user_id, cs.last_reviewed_at
+            SELECT c.standard, c.ref, c.title, cs.status, cs.rationale,
+                   cs.owner_user_id, cs.last_reviewed_at
             FROM controls c
             LEFT JOIN control_states cs
               ON cs.control_id = c.id AND cs.tenant_id = :tid
@@ -44,14 +47,22 @@ async def soa_csv(
         {"tid": tid},
     )
     rows = [dict(r) for r in res.mappings().all()]
-    headers = ["standard", "ref", "title", "status", "rationale", "owner_user_id", "last_reviewed_at"]
+    headers = [
+        "standard",
+        "ref",
+        "title",
+        "status",
+        "rationale",
+        "owner_user_id",
+        "last_reviewed_at",
+    ]
     return StreamingResponse(_to_csv(rows, headers), media_type="text/csv")
 
 
 @router.get("/risks.csv")
 async def risks_csv(
-    session: AsyncSession = Depends(get_session),
-    user: object = Depends(get_current_user_jwt),
+    session: Annotated[AsyncSession, Depends(get_session)],
+    user: Annotated[object, Depends(get_current_user_jwt)],
 ):
     tid = current_tenant()
     if not tid:
@@ -59,7 +70,8 @@ async def risks_csv(
     res = await session.execute(
         text(
             """
-            SELECT title, threat, vulnerability, impact, likelihood, status, treatment, asset_id, owner_user_id
+            SELECT title, threat, vulnerability, impact, likelihood, status,
+                   treatment, asset_id, owner_user_id
             FROM risks
             WHERE tenant_id=:tid
             ORDER BY created_at DESC
@@ -68,14 +80,24 @@ async def risks_csv(
         {"tid": tid},
     )
     rows = [dict(r) for r in res.mappings().all()]
-    headers = ["title", "threat", "vulnerability", "impact", "likelihood", "status", "treatment", "asset_id", "owner_user_id"]
+    headers = [
+        "title",
+        "threat",
+        "vulnerability",
+        "impact",
+        "likelihood",
+        "status",
+        "treatment",
+        "asset_id",
+        "owner_user_id",
+    ]
     return StreamingResponse(_to_csv(rows, headers), media_type="text/csv")
 
 
 @router.get("/tasks.csv")
 async def tasks_csv(
-    session: AsyncSession = Depends(get_session),
-    user: object = Depends(get_current_user_jwt),
+    session: Annotated[AsyncSession, Depends(get_session)],
+    user: Annotated[object, Depends(get_current_user_jwt)],
 ):
     tid = current_tenant()
     if not tid:
@@ -92,5 +114,14 @@ async def tasks_csv(
         {"tid": tid},
     )
     rows = [dict(r) for r in res.mappings().all()]
-    headers = ["title", "status", "due_date", "control_id", "risk_id", "assignee", "created_at", "updated_at"]
+    headers = [
+        "title",
+        "status",
+        "due_date",
+        "control_id",
+        "risk_id",
+        "assignee",
+        "created_at",
+        "updated_at",
+    ]
     return StreamingResponse(_to_csv(rows, headers), media_type="text/csv")
