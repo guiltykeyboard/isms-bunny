@@ -28,7 +28,7 @@ async def _seed_user_and_membership(user_id: uuid.UUID):
             text(
                 """
                 INSERT INTO memberships (user_id, tenant_id, roles)
-                VALUES (:uid, :tid, ARRAY['admin'])
+                VALUES (:uid, :tid, ARRAY['msp_admin']::member_role[])
                 ON CONFLICT DO NOTHING
                 """
             ),
