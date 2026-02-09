@@ -7,6 +7,7 @@ from app.routes import (
     memberships,
     oidc,
     providers,
+    controls,
     saml_logs,
     setup,
     tenants,
@@ -46,3 +47,4 @@ app.include_router(setup.router)
 app.include_router(webauthn.router)
 app.include_router(providers.router)
 app.include_router(saml_logs.router)
+app.include_router(controls.router)
