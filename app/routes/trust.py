@@ -229,6 +229,30 @@ async def gated_content(
     }
 
 
+@router.get("/trust/audit")
+async def trust_audit(
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    limit: int = 50,
+):
+    tenant_id = current_tenant()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    require_msp_admin(user.is_msp_admin)
+    rows = await session.execute(
+        text(
+            """
+            SELECT email, action, created_at
+            FROM trust_access_audit
+            WHERE tenant_id=:tid
+            ORDER BY created_at DESC
+            LIMIT :limit
+            """
+        ),
+        {"tid": tenant_id, "limit": limit},
+    )
+    return [dict(r) for r in rows.mappings().all()]
+
 @router.post("/trust/request-access")
 async def request_trust_access(
     payload: dict, session: Annotated[AsyncSession, Depends(get_session)]
