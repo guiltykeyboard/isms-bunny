@@ -193,7 +193,7 @@ async def request_trust_access(
     return {"detail": "request received"}
 
 
-@router.get("/trust/access-requests")
+@router.get("/trust/requests")
 async def admin_list_trust_requests(
     user: Annotated[User, Depends(get_current_user_jwt)],
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -221,7 +221,7 @@ async def admin_list_trust_requests(
     return [dict(r) for r in rows.mappings().all()]
 
 
-@router.patch("/trust/access-requests/{request_id}")
+@router.patch("/trust/requests/{request_id}")
 async def admin_update_trust_request(
     request_id: str,
     payload: dict,

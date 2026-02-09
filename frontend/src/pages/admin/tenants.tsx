@@ -10,8 +10,8 @@ export default function TenantsPage() {
   );
   const colors = palette[resolveMode(mode)];
   const { data, mutate } = useSWR("/tenants", apiFetch);
-
-  const [form, setForm] = useState({ name: "", fqdn: "", type: "customer" });
+  const [parentOptions, setParentOptions] = useState<any[]>([]);
+  const [form, setForm] = useState({ name: "", fqdn: "", type: "customer", parent_tenant_id: "" });
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,9 +19,14 @@ export default function TenantsPage() {
       method: "POST",
       body: JSON.stringify(form),
     });
-    setForm({ name: "", fqdn: "", type: "customer" });
+    setForm({ name: "", fqdn: "", type: "customer", parent_tenant_id: "" });
     mutate();
   };
+
+  // Populate parent options (excluding the new tenant itself)
+  useEffect(() => {
+    if (data) setParentOptions(data);
+  }, [data]);
 
   return (
     <div style={{ padding: "2rem", background: colors.background, minHeight: "100vh", color: colors.text }}>
@@ -33,14 +38,32 @@ export default function TenantsPage() {
           <option value="customer">Customer</option>
           <option value="internal_msp">Internal MSP</option>
         </select>
+        <select
+          style={inp(colors)}
+          value={form.parent_tenant_id}
+          onChange={(e) => setForm({ ...form, parent_tenant_id: e.target.value })}
+        >
+          <option value="">(no parent)</option>
+          {(parentOptions || []).map((t: any) => (
+            <option key={t.id} value={t.id}>
+              {t.name} ({t.type})
+            </option>
+          ))}
+        </select>
         <button style={btn(colors)} type="submit">Add</button>
       </form>
 
       <TableCard
         title="Existing"
         colors={colors}
-        columns={["Name", "FQDN", "Type", "Id"]}
-        rows={(data || []).map((t: any) => [t.name, t.fqdn, t.type, t.id])}
+        columns={["Name", "FQDN", "Type", "Parent", "Id"]}
+        rows={(data || []).map((t: any) => [
+          t.name,
+          t.fqdn,
+          t.type,
+          t.parent_tenant_id || "—",
+          t.id,
+        ])}
       />
     </div>
   );
