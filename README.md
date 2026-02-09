@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="ISMS-Bunny logo" width="140">
+  <img src="assets/logo.png" alt="ISMS-Bunny logo" width="180">
 </p>
 
 <h1 align="center">ISMS-Bunny</h1>
