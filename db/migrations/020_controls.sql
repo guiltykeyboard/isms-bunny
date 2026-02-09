@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS controls (
 ALTER TABLE controls
     ADD COLUMN IF NOT EXISTS standard text,
     ADD COLUMN IF NOT EXISTS ref text,
+    ADD COLUMN IF NOT EXISTS code text,
     ADD COLUMN IF NOT EXISTS title text,
     ADD COLUMN IF NOT EXISTS description text,
     ADD COLUMN IF NOT EXISTS tags text[] DEFAULT '{}';
@@ -104,20 +105,25 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE INDEX IF NOT EXISTS tasks_tenant_idx ON tasks(tenant_id, status);
 
 -- Seed a broader subset of ISO27001:2022 controls
-INSERT INTO controls (standard, ref, title, description)
+INSERT INTO controls (standard, ref, code, title, description)
 SELECT *
 FROM (VALUES
-    ('ISO27001:2022', 'A.5.1', 'Policies for information security', 'Provide management direction for information security.'),
-    ('ISO27001:2022', 'A.5.7', 'Threat intelligence', 'Collect and analyze threat intelligence to improve security posture.'),
-    ('ISO27001:2022', 'A.5.12', 'Classification of information', 'Ensure information is classified based on value and sensitivity.'),
-    ('ISO27001:2022', 'A.5.23', 'Information security for use of cloud services', 'Establish processes to select, use, manage, and exit cloud services securely.'),
-    ('ISO27001:2022', 'A.6.2', 'Mobile device and teleworking', 'Apply security measures for mobile devices and remote work.'),
-    ('ISO27001:2022', 'A.8.1', 'User endpoint devices', 'Protect endpoint devices with appropriate controls.'),
-    ('ISO27001:2022', 'A.8.8', 'Management of technical vulnerabilities', 'Establish vulnerability management to remediate in a timely manner.'),
-    ('ISO27001:2022', 'A.12.1', 'Logging and monitoring', 'Log and monitor activities to identify events.'),
-    ('ISO27001:2022', 'A.12.4', 'Event logging', 'Produce, store, and regularly review logs.'),
-    ('ISO27001:2022', 'A.14.1', 'Information security requirements in projects', 'Integrate security into project management.'),
-    ('ISO27001:2022', 'A.17.1', 'Information security continuity', 'Ensure information security during disruptions.'),
-    ('ISO27001:2022', 'A.18.1', 'Compliance with legal and contractual requirements', 'Identify and meet all applicable requirements.')
-) AS seed(standard, ref, title, description)
+    ('ISO27001:2022', 'A.5.1', 'A.5.1', 'Policies for information security', 'Provide management direction for information security.'),
+    ('ISO27001:2022', 'A.5.7', 'A.5.7', 'Threat intelligence', 'Collect and analyze threat intelligence to improve security posture.'),
+    ('ISO27001:2022', 'A.5.12', 'A.5.12', 'Classification of information', 'Ensure information is classified based on value and sensitivity.'),
+    ('ISO27001:2022', 'A.5.23', 'A.5.23', 'Information security for use of cloud services', 'Establish processes to select, use, manage, and exit cloud services securely.'),
+    ('ISO27001:2022', 'A.6.2', 'A.6.2', 'Mobile device and teleworking', 'Apply security measures for mobile devices and remote work.'),
+    ('ISO27001:2022', 'A.8.1', 'A.8.1', 'User endpoint devices', 'Protect endpoint devices with appropriate controls.'),
+    ('ISO27001:2022', 'A.8.8', 'A.8.8', 'Management of technical vulnerabilities', 'Establish vulnerability management to remediate in a timely manner.'),
+    ('ISO27001:2022', 'A.12.1', 'A.12.1', 'Logging and monitoring', 'Log and monitor activities to identify events.'),
+    ('ISO27001:2022', 'A.12.4', 'A.12.4', 'Event logging', 'Produce, store, and regularly review logs.'),
+    ('ISO27001:2022', 'A.14.1', 'A.14.1', 'Information security requirements in projects', 'Integrate security into project management.'),
+    ('ISO27001:2022', 'A.17.1', 'A.17.1', 'Information security continuity', 'Ensure information security during disruptions.'),
+    ('ISO27001:2022', 'A.18.1', 'A.18.1', 'Compliance with legal and contractual requirements', 'Identify and meet all applicable requirements.')
+) AS seed(standard, ref, code, title, description)
 ON CONFLICT (standard, ref) DO NOTHING;
+
+-- Backfill any existing rows missing code
+UPDATE controls
+SET code = COALESCE(code, ref)
+WHERE code IS NULL;
