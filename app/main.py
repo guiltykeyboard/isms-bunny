@@ -5,6 +5,7 @@ from app.config import get_settings
 from app.routes import (
     auth,
     memberships,
+    oidc,
     providers,
     saml_logs,
     setup,
@@ -39,6 +40,7 @@ app.include_router(users.router)
 app.include_router(trust.router)
 app.include_router(tenants.router)
 app.include_router(auth.router)
+app.include_router(oidc.router)
 app.include_router(memberships.router)
 app.include_router(setup.router)
 app.include_router(webauthn.router)

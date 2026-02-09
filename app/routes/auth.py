@@ -408,6 +408,7 @@ async def _verify_id_token(id_token: str, cfg: dict, expected_nonce: str | None)
             algorithms=["RS256", "ES256", "RS512", "ES512"],
             audience=audience,
             issuer=issuer,
+            options={"verify_at_hash": False, "require": ["exp", "iat", "iss", "aud"]},
         )
         if expected_nonce and claims.get("nonce") != expected_nonce:
             raise HTTPException(status_code=400, detail="nonce mismatch")
@@ -433,12 +434,18 @@ def _saml_request_data(request: Request, post_data: dict) -> dict:
 
 
 def _build_saml_settings(cfg: dict, request: Request) -> dict:
-    sp_acs = cfg["config"].get("sp_acs_url") or str(
-        request.url_for("saml_acs", provider=cfg["name"])
+    sp_acs = (
+        cfg.get("saml_sp_acs_override")
+        or cfg["config"].get("sp_acs_url")
+        or str(request.url_for("saml_acs", provider=cfg["name"]))
     )
     sp_entity = cfg["config"].get("sp_entity_id") or sp_acs
-    want_assertions_signed = cfg["config"].get("want_assertions_signed", True)
-    want_messages_signed = cfg["config"].get("want_messages_signed", False)
+    want_assertions_signed = cfg.get("saml_require_signed_assertions") or cfg["config"].get(
+        "want_assertions_signed", True
+    )
+    want_messages_signed = cfg.get("saml_require_signed_messages") or cfg["config"].get(
+        "want_messages_signed", False
+    )
     sp_x509 = cfg["config"].get("sp_x509cert")
     sp_key = cfg["config"].get("sp_private_key")
     metadata_url = cfg["config"].get("idp_metadata_url")
@@ -494,3 +501,38 @@ async def _log_saml(session: AsyncSession, tenant_id, level: str, message: str, 
         {"tid": tenant_id, "lvl": level, "msg": message, "det": details or {}},
     )
     await session.commit()
+
+
+@router.get("/login/auto")
+async def login_auto(email: str, session: Annotated[AsyncSession, Depends(get_session)]):
+    """
+    Determine auth path by email: returns external provider info or local/passkey.
+    """
+    tenant_id = current_tenant()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    user = await get_user_by_email(session, email.lower().strip())
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    # Prefer configured IdP if present and user is external-first
+    providers = await session.execute(
+        text(
+            """
+            SELECT id, name, type
+            FROM idp_connections
+            WHERE tenant_id=:tid AND enabled=true
+            ORDER BY name
+            """
+        ),
+        {"tid": tenant_id},
+    )
+    prov_list = [dict(r) for r in providers.mappings().all()]
+    has_idp = len(prov_list) > 0
+    if has_idp and user.auth_preference == "external" and not user.allow_local_fallback:
+        return {"route": "external", "provider": prov_list[0], "providers": prov_list}
+    return {
+        "route": "local",
+        "allow_webauthn": True,
+        "require_totp": user.auth_preference == "external",
+        "providers": prov_list,
+    }
