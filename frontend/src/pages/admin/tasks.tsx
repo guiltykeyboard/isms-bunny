@@ -24,6 +24,8 @@ export default function TasksPage() {
   );
   const colors = palette[resolveMode(mode)];
   const { data, mutate } = useSWR<Task[]>("/tasks", apiFetch);
+  const { data: controls } = useSWR<any[]>("/controls/soa", apiFetch);
+  const { data: risks } = useSWR<any[]>("/risks", apiFetch);
   const [form, setForm] = useState<Partial<Task>>({
     title: "",
     status: "open",
@@ -67,15 +69,29 @@ export default function TasksPage() {
         <input
           style={input(colors)}
           placeholder="Control ID (optional)"
+          list="control-options"
           value={form.control_id || ""}
           onChange={(e) => setForm({ ...form, control_id: e.target.value })}
         />
+        <datalist id="control-options">
+          {(controls || []).map((c) => (
+            <option key={c.id} value={c.id}>{`${c.ref} ${c.title}`}</option>
+          ))}
+        </datalist>
         <input
           style={input(colors)}
           placeholder="Risk ID (optional)"
+          list="risk-options"
           value={form.risk_id || ""}
           onChange={(e) => setForm({ ...form, risk_id: e.target.value })}
         />
+        <datalist id="risk-options">
+          {(risks || []).map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.title}
+            </option>
+          ))}
+        </datalist>
         <input
           style={input(colors)}
           placeholder="Risk ID (optional)"
@@ -120,7 +136,23 @@ export default function TasksPage() {
           >
             <div style={{ fontWeight: 700 }}>{t.title}</div>
             <div style={{ color: colors.muted }}>
-              Status {t.status} {t.due_date ? `• due ${t.due_date}` : ""}
+              Status{" "}
+              <select
+                value={t.status}
+                onChange={async (e) => {
+                  await apiFetch(`/tasks/${t.id}`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ status: e.target.value }),
+                  });
+                  mutate();
+                }}
+                style={input(colors)}
+              >
+                <option value="open">open</option>
+                <option value="in_progress">in_progress</option>
+                <option value="done">done</option>
+              </select>{" "}
+              {t.due_date ? `• due ${t.due_date}` : ""}
             </div>
             {t.control_id && (
               <div style={{ color: colors.muted }}>Control: {t.control_id}</div>
