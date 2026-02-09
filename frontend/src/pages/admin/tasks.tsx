@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 import {
   palette,
@@ -27,12 +27,17 @@ export default function TasksPage() {
   const { data: controls } = useSWR<any[]>("/controls/soa", apiFetch);
   const { data: risks } = useSWR<any[]>("/risks", apiFetch);
   const { data: dueSoon } = useSWR<Task[]>("/tasks/due-soon?days=7", apiFetch);
+  const { data: tenant, mutate: mutateTenant } = useSWR<any>(
+    "/tenants/current",
+    apiFetch,
+  );
   const [form, setForm] = useState<Partial<Task>>({
     title: "",
     status: "open",
   });
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("all");
+  const [webhookUrl, setWebhookUrl] = useState<string>("");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +49,39 @@ export default function TasksPage() {
       setStatusMsg("Saved");
     } catch (err: any) {
       setStatusMsg(err.message || "Save failed");
+    }
+  };
+
+  useEffect(() => {
+    if (tenant?.reminder_webhook_url) {
+      setWebhookUrl(tenant.reminder_webhook_url);
+    } else {
+      setWebhookUrl("");
+    }
+  }, [tenant]);
+
+  const saveWebhook = async () => {
+    if (!tenant?.id) return;
+    setStatusMsg("Saving webhook…");
+    try {
+      await apiFetch(`/tenants/${tenant.id}/reminders/webhook`, {
+        method: "PATCH",
+        body: JSON.stringify({ reminder_webhook_url: webhookUrl || null }),
+      });
+      setStatusMsg("Webhook saved");
+      mutateTenant();
+    } catch (err: any) {
+      setStatusMsg(err.message || "Save failed");
+    }
+  };
+
+  const triggerReminders = async () => {
+    setStatusMsg("Sending reminders…");
+    try {
+      const res = await apiFetch("/tasks/remind", { method: "POST" });
+      setStatusMsg(`Reminders sent (${res.count} tasks)`);
+    } catch (err: any) {
+      setStatusMsg(err.message || "Reminder send failed");
     }
   };
 
@@ -64,6 +102,26 @@ export default function TasksPage() {
       >
         Download Tasks CSV
       </a>
+      <div style={{ marginTop: "0.5rem" }}>
+        <h3>Reminders</h3>
+        <p style={{ color: colors.muted, marginTop: 0 }}>
+          Set a webhook to receive due-soon task reminders for this tenant.
+        </p>
+        <div style={{ display: "flex", gap: "0.5rem", maxWidth: 720 }}>
+          <input
+            style={input(colors)}
+            placeholder="https://example.com/webhook"
+            value={webhookUrl}
+            onChange={(e) => setWebhookUrl(e.target.value)}
+          />
+          <button style={btn(colors)} type="button" onClick={saveWebhook}>
+            Save webhook
+          </button>
+          <button style={btn(colors)} type="button" onClick={triggerReminders}>
+            Send now
+          </button>
+        </div>
+      </div>
       {dueSoon && dueSoon.length > 0 && (
         <div
           style={{
@@ -119,12 +177,6 @@ export default function TasksPage() {
             </option>
           ))}
         </datalist>
-        <input
-          style={input(colors)}
-          placeholder="Risk ID (optional)"
-          value={form.risk_id || ""}
-          onChange={(e) => setForm({ ...form, risk_id: e.target.value })}
-        />
         <input
           style={input(colors)}
           placeholder="Assignee user id"

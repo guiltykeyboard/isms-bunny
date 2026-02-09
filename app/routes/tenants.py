@@ -27,7 +27,14 @@ async def list_tenants(
     result = await session.execute(select(Tenant))
     tenants = result.scalars().all()
     return [
-        {"id": str(t.id), "name": t.name, "fqdn": t.fqdn, "type": t.type}
+        {
+            "id": str(t.id),
+            "name": t.name,
+            "fqdn": t.fqdn,
+            "type": t.type,
+            "parent_tenant_id": t.parent_tenant_id,
+            "reminder_webhook_url": getattr(t, "reminder_webhook_url", None),
+        }
         for t in tenants
     ]
 
@@ -73,7 +80,14 @@ async def get_tenant(
     t = result.scalar_one_or_none()
     if not t:
         raise HTTPException(status_code=404, detail="Tenant not found")
-    return {"id": str(t.id), "name": t.name, "fqdn": t.fqdn, "type": t.type}
+    return {
+        "id": str(t.id),
+        "name": t.name,
+        "fqdn": t.fqdn,
+        "type": t.type,
+        "parent_tenant_id": t.parent_tenant_id,
+        "reminder_webhook_url": getattr(t, "reminder_webhook_url", None),
+    }
 
 
 @router.patch("/{tenant_id}")
@@ -100,7 +114,14 @@ async def update_tenant(
     if not t:
         raise HTTPException(status_code=404, detail="Tenant not found")
     await session.commit()
-    return {"id": str(t.id), "name": t.name, "fqdn": t.fqdn, "type": t.type}
+    return {
+        "id": str(t.id),
+        "name": t.name,
+        "fqdn": t.fqdn,
+        "type": t.type,
+        "parent_tenant_id": t.parent_tenant_id,
+        "reminder_webhook_url": getattr(t, "reminder_webhook_url", None),
+    }
 
 
 @router.get("/current")
@@ -123,6 +144,7 @@ async def current_tenant_info(
         "type": t.type,
         "storage_config": getattr(t, "storage_config", None),
         "smtp_config": getattr(t, "smtp_config", None),
+        "reminder_webhook_url": getattr(t, "reminder_webhook_url", None),
     }
 
 
@@ -311,6 +333,34 @@ async def update_tenant_smtp(
         raise HTTPException(status_code=404, detail="Tenant not found")
     await session.commit()
     return {"id": str(t.id), "smtp_config": smtp_cfg}
+
+
+@router.patch("/{tenant_id}/reminders/webhook")
+async def update_tenant_reminder_webhook(
+    tenant_id: UUID,
+    payload: dict,
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    """
+    Update per-tenant reminder webhook URL. Empty payload clears it.
+    """
+    await assert_tenant_access(session, user.id, tenant_id, user.is_msp_admin)
+    url = payload.get("reminder_webhook_url")
+    result = await session.execute(
+        sql_update(Tenant)
+        .where(Tenant.id == tenant_id)
+        .values(reminder_webhook_url=url)
+        .returning(Tenant)
+    )
+    t = result.scalar_one_or_none()
+    if not t:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    await session.commit()
+    return {
+        "id": str(t.id),
+        "reminder_webhook_url": getattr(t, "reminder_webhook_url", None),
+    }
 
 
 @router.delete("/{tenant_id}", status_code=status.HTTP_204_NO_CONTENT)

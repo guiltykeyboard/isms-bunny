@@ -16,6 +16,7 @@ class Tenant(Base):
     type: Mapped[str] = mapped_column(String, default="customer")
     storage_config: Mapped[dict | None] = mapped_column(JSON, default=dict)
     smtp_config: Mapped[dict | None] = mapped_column(JSON, default=dict)
+    reminder_webhook_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class User(Base):

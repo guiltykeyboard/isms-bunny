@@ -1,5 +1,6 @@
 from typing import Annotated
 
+import requests
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,7 +23,8 @@ async def list_tasks(
     res = await session.execute(
         text(
             """
-            SELECT id, title, status, due_date, control_id, risk_id, assignee, created_at, updated_at
+            SELECT id, title, status, due_date, control_id, risk_id, assignee,
+                   created_at, updated_at
             FROM tasks
             WHERE tenant_id=:tid
             ORDER BY status, due_date NULLS LAST, created_at DESC
@@ -31,6 +33,76 @@ async def list_tasks(
         {"tid": tid},
     )
     return [dict(r) for r in res.mappings().all()]
+
+
+@router.post("/remind")
+async def send_reminders(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    user: Annotated[object, Depends(get_current_user_jwt)],
+    payload: dict | None = None,
+    days: int = 7,
+):
+    """
+    Send due-soon task reminders to the tenant's configured webhook.
+    Optional override: {"webhook_url": "..."}.
+    """
+    tid = current_tenant()
+    if not tid:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+
+    # Load tenant info
+    result = await session.execute(
+        text(
+            """
+            SELECT name, reminder_webhook_url, smtp_config
+            FROM tenants WHERE id=:tid
+            """
+        ),
+        {"tid": tid},
+    )
+    row = result.first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    tenant_name, tenant_webhook, _tenant_smtp = row
+
+    res = await session.execute(
+        text(
+            """
+            SELECT id, title, status, due_date, control_id, risk_id, assignee, created_at
+            FROM tasks
+            WHERE tenant_id=:tid
+              AND status <> 'done'
+              AND due_date IS NOT NULL
+              AND due_date <= (CURRENT_DATE + (:days || ' days')::interval)
+            ORDER BY due_date ASC
+            """
+        ),
+        {"tid": tid, "days": days},
+    )
+    tasks = [dict(r) for r in res.mappings().all()]
+    if not tasks:
+        return {"detail": "no tasks due soon", "count": 0}
+
+    webhook_url = (payload or {}).get("webhook_url") or tenant_webhook
+    if not webhook_url:
+        raise HTTPException(status_code=400, detail="No reminder webhook configured")
+
+    body = {
+        "tenant_id": str(tid),
+        "tenant_name": tenant_name,
+        "days": days,
+        "task_count": len(tasks),
+        "tasks": tasks,
+    }
+    try:
+        resp = requests.post(webhook_url, json=body, timeout=8)
+        resp.raise_for_status()
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(
+            status_code=502, detail=f"Webhook delivery failed: {exc}"
+        ) from exc
+
+    return {"detail": "reminders sent", "count": len(tasks)}
 
 
 @router.post("")
@@ -48,8 +120,8 @@ async def add_task(
     await session.execute(
         text(
             """
-            INSERT INTO tasks (tenant_id, title, status, due_date, control_id, assignee)
-            VALUES (:tid, :title, :status, :due, :control, :assignee)
+            INSERT INTO tasks (tenant_id, title, status, due_date, control_id, risk_id, assignee)
+            VALUES (:tid, :title, :status, :due, :control, :risk, :assignee)
             """
         ),
         {
@@ -68,9 +140,9 @@ async def add_task(
 
 @router.get("/due-soon")
 async def due_soon(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    user: Annotated[object, Depends(get_current_user_jwt)],
     days: int = 7,
-    session: Annotated[AsyncSession, Depends(get_session)] = Depends(),
-    user: Annotated[object, Depends(get_current_user_jwt)] = Depends(),
 ):
     tid = current_tenant()
     if not tid:

@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { apiFetch } from "../../lib/api";
 import {
   palette,
