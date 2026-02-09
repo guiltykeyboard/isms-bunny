@@ -208,3 +208,5 @@ CREATE INDEX IF NOT EXISTS idx_trust_pages_tenant ON trust_pages(tenant_id);
 
 COMMENT ON TABLE trust_pages IS 'Public-facing trust center content per tenant';
 COMMENT ON TABLE audit_logs IS 'Immutable-ish audit log; consider shipping to external sink';
+-- Enable pgcrypto for gen_random_uuid
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";

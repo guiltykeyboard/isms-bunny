@@ -7,7 +7,7 @@ echo "Applying migrations to ${DB_URL}"
 
 for file in $(ls db/migrations/*.sql | sort); do
   echo "Applying $file"
-  psql "${DB_URL}" -f "$file"
+  psql -v ON_ERROR_STOP=1 "${DB_URL}" -f "$file"
 done
 
 echo "Migrations applied."
