@@ -1,0 +1,73 @@
+import useSWR from "swr";
+import { useEffect, useState } from "react";
+import { apiFetch } from "../../lib/api";
+import {
+  palette,
+  resolveMode,
+  getInitialMode,
+  ThemeMode,
+} from "../../styles/theme";
+import { TableCard } from "../../components/TableCard";
+
+type AlertPref = {
+  alert_type: string;
+  channel: string;
+  recipients: string[];
+  last_sent_at?: string | null;
+};
+
+export default function AlertsPage() {
+  const [mode] = useState<ThemeMode>(() =>
+    typeof window === "undefined" ? "dark" : getInitialMode(),
+  );
+  const colors = palette[resolveMode(mode)];
+  const { data: tenant } = useSWR<any>("/tenants/current", apiFetch);
+  const [prefs, setPrefs] = useState<AlertPref[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!tenant?.id) return;
+      setLoading(true);
+      const res = await apiFetch(`/tenants/${tenant.id}/alerts`);
+      setPrefs(res || []);
+      setLoading(false);
+    };
+    load();
+  }, [tenant]);
+
+  const rows = (prefs || []).map((p) => [
+    p.alert_type,
+    p.channel,
+    (p.recipients || []).join(", "),
+    p.last_sent_at || "—",
+  ]);
+
+  return (
+    <div
+      style={{
+        padding: "2rem",
+        minHeight: "100vh",
+        background: colors.background,
+        color: colors.text,
+      }}
+    >
+      <h1>Alert Preferences</h1>
+      <p style={{ color: colors.muted }}>
+        Per-tenant alert channels and recipients. Use task reminders to configure
+        task_due; other alert types will appear here as they are added.
+      </p>
+      <TableCard
+        title={loading ? "Loading…" : "Alerts"}
+        colors={colors}
+        columns={["Alert", "Channel", "Recipients", "Last sent"]}
+        rows={rows}
+      />
+      {!rows.length && !loading && (
+        <div style={{ marginTop: "1rem", color: colors.muted }}>
+          No alert preferences found.
+        </div>
+      )}
+    </div>
+  );
+}

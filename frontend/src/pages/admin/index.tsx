@@ -12,6 +12,7 @@ export default function AdminIndex() {
     { href: "/admin/risks", label: "Risk Register" },
     { href: "/admin/evidence", label: "Evidence" },
     { href: "/admin/tasks", label: "Tasks" },
+    { href: "/admin/alerts", label: "Alert Preferences" },
     { href: "/admin/trust-editor", label: "Trust Editor" },
     { href: "/admin/access-requests", label: "Trust Access Requests" },
     { href: "/admin/trust-audit", label: "Trust Audit" },
