@@ -11,6 +11,24 @@ from app.deps import get_current_user_jwt
 
 router = APIRouter(prefix="/saml/logs", tags=["saml"])
 
+async def log_saml_event(
+    session: AsyncSession,
+    tenant_id: str,
+    level: str,
+    message: str,
+    details: dict | None = None,
+):
+    await session.execute(
+        text(
+            """
+            INSERT INTO saml_logs (tenant_id, level, message, details)
+            VALUES (:tid, :level, :message, COALESCE(:details, '{}'::jsonb))
+            """
+        ),
+        {"tid": tenant_id, "level": level, "message": message, "details": details or {}},
+    )
+    await session.commit()
+
 
 @router.get("")
 async def list_logs(

@@ -42,11 +42,17 @@ async def create_tenant(
     name = payload.get("name")
     fqdn = payload.get("fqdn")
     tenant_type = payload.get("type", "customer")
+    parent_tenant_id = payload.get("parent_tenant_id")
     if not name or not fqdn:
         raise HTTPException(status_code=400, detail="name and fqdn are required")
     stmt = (
         insert(Tenant)
-        .values(name=name, fqdn=fqdn.lower(), type=tenant_type)
+        .values(
+            name=name,
+            fqdn=fqdn.lower(),
+            type=tenant_type,
+            parent_tenant_id=parent_tenant_id,
+        )
         .returning(Tenant)
     )
     result = await session.execute(stmt)
@@ -85,6 +91,7 @@ async def update_tenant(
             name=payload.get("name"),
             fqdn=payload.get("fqdn"),
             type=payload.get("type", "customer"),
+            parent_tenant_id=payload.get("parent_tenant_id"),
         )
         .returning(Tenant)
     )

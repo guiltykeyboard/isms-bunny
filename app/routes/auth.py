@@ -78,14 +78,14 @@ async def login(
 ):
     tenant_id = current_tenant()
     idp_configured = False
+    tenant_local_allowed = True
     if tenant_id:
         allow = await session.execute(
             "SELECT allow_local_login FROM tenants WHERE id=:tid",
             {"tid": tenant_id},
         )
         row = allow.fetchone()
-        if row and row[0] is False:
-            raise HTTPException(status_code=403, detail="Local login disabled for this tenant")
+        tenant_local_allowed = bool(row[0]) if row else True
         idp = await session.execute(
             "SELECT count(*) FROM idp_connections WHERE tenant_id=:tid AND enabled=true",
             {"tid": tenant_id},
@@ -101,8 +101,11 @@ async def login(
     user = await get_user_by_email(session, email)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    if idp_configured and user.auth_preference == "external" and not user.allow_local_fallback:
+    break_glass = bool(payload.get("allow_break_glass", False)) or bool(user.allow_local_fallback)
+    if idp_configured and user.auth_preference == "external" and not break_glass:
         raise HTTPException(status_code=403, detail="Use single sign-on for this account")
+    if not tenant_local_allowed and not break_glass:
+        raise HTTPException(status_code=403, detail="Local login disabled for this tenant")
 
     cred = await session.execute(
         """
