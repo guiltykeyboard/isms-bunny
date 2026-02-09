@@ -54,6 +54,7 @@ jobs:
           PGPASSWORD: postgres
         run: |
           psql -h localhost -U postgres -c "CREATE DATABASE isms;"
+          psql -h localhost -U postgres -d isms -c "DROP TABLE IF EXISTS evidence CASCADE;"
           DATABASE_URL="postgresql://postgres:postgres@localhost:5432/isms" ./scripts/apply_migrations.sh
       - name: Run tests
         run: pytest
