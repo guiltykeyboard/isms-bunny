@@ -67,6 +67,12 @@ export default function ControlsAdmin() {
       >
         Download SoA CSV
       </a>
+      <a
+        href="/reports/soa.pdf"
+        style={{ color: colors.primary, fontWeight: 600, marginLeft: "1rem" }}
+      >
+        Download SoA PDF
+      </a>
       <div style={{ display: "grid", gap: "0.75rem", marginTop: "1rem" }}>
         {(data || []).map((row) => (
           <div
