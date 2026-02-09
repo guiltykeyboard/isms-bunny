@@ -38,6 +38,8 @@ export default function TasksPage() {
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("all");
   const [webhookUrl, setWebhookUrl] = useState<string>("");
+  const [channel, setChannel] = useState<string>("webhook");
+  const [recipients, setRecipients] = useState<string>("");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +60,14 @@ export default function TasksPage() {
     } else {
       setWebhookUrl("");
     }
+    // fetch alert preference for task_due
+    const fetchPref = async () => {
+      if (!tenant?.id) return;
+      const pref = await apiFetch(`/tenants/${tenant.id}/alerts/task_due`);
+      setChannel(pref.channel || "webhook");
+      setRecipients((pref.recipients || []).join(","));
+    };
+    fetchPref();
   }, [tenant]);
 
   const saveWebhook = async () => {
@@ -70,6 +80,26 @@ export default function TasksPage() {
       });
       setStatusMsg("Webhook saved");
       mutateTenant();
+    } catch (err: any) {
+      setStatusMsg(err.message || "Save failed");
+    }
+  };
+
+  const saveAlertPref = async () => {
+    if (!tenant?.id) return;
+    setStatusMsg("Saving alert preference…");
+    try {
+      await apiFetch(`/tenants/${tenant.id}/alerts/task_due`, {
+        method: "PUT",
+        body: JSON.stringify({
+          channel,
+          recipients: recipients
+            .split(",")
+            .map((r) => r.trim())
+            .filter(Boolean),
+        }),
+      });
+      setStatusMsg("Alert preference saved");
     } catch (err: any) {
       setStatusMsg(err.message || "Save failed");
     }
@@ -119,6 +149,34 @@ export default function TasksPage() {
           </button>
           <button style={btn(colors)} type="button" onClick={triggerReminders}>
             Send now
+          </button>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: "0.5rem",
+            marginTop: "0.5rem",
+            maxWidth: 720,
+          }}
+        >
+          <select
+            style={input(colors)}
+            value={channel}
+            onChange={(e) => setChannel(e.target.value)}
+          >
+            <option value="webhook">webhook</option>
+            <option value="email">email</option>
+            <option value="both">both</option>
+            <option value="none">none</option>
+          </select>
+          <input
+            style={input(colors)}
+            placeholder="Recipients (comma separated)"
+            value={recipients}
+            onChange={(e) => setRecipients(e.target.value)}
+          />
+          <button style={btn(colors)} type="button" onClick={saveAlertPref}>
+            Save alert channel
           </button>
         </div>
       </div>

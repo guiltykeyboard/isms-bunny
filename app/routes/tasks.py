@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.context import current_tenant
 from app.db import get_session
 from app.deps import get_current_user_jwt
+from app.emailer import resolve_smtp_config, send_email
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -50,20 +51,31 @@ async def send_reminders(
     if not tid:
         raise HTTPException(status_code=400, detail="Tenant not resolved")
 
-    # Load tenant info
+    # Load tenant info + alert pref
     result = await session.execute(
         text(
             """
-            SELECT name, reminder_webhook_url, smtp_config
-            FROM tenants WHERE id=:tid
+            SELECT t.name,
+                   t.reminder_webhook_url,
+                   t.smtp_config,
+                   p.channel AS alert_channel,
+                   p.recipients AS alert_recipients
+            FROM tenants t
+            LEFT JOIN tenant_alert_prefs p
+              ON p.tenant_id = t.id AND p.alert_type = 'task_due'
+            WHERE t.id=:tid
             """
         ),
         {"tid": tid},
     )
-    row = result.first()
+    row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="Tenant not found")
-    tenant_name, tenant_webhook, _tenant_smtp = row
+    tenant_name = row["name"]
+    tenant_webhook = row["reminder_webhook_url"]
+    tenant_smtp = row["smtp_config"]
+    channel = row["alert_channel"] or "webhook"
+    recipients = row["alert_recipients"] or []
 
     res = await session.execute(
         text(
@@ -83,10 +95,6 @@ async def send_reminders(
     if not tasks:
         return {"detail": "no tasks due soon", "count": 0}
 
-    webhook_url = (payload or {}).get("webhook_url") or tenant_webhook
-    if not webhook_url:
-        raise HTTPException(status_code=400, detail="No reminder webhook configured")
-
     body = {
         "tenant_id": str(tid),
         "tenant_name": tenant_name,
@@ -94,15 +102,52 @@ async def send_reminders(
         "task_count": len(tasks),
         "tasks": tasks,
     }
-    try:
-        resp = requests.post(webhook_url, json=body, timeout=8)
-        resp.raise_for_status()
-    except Exception as exc:  # pragma: no cover
-        raise HTTPException(
-            status_code=502, detail=f"Webhook delivery failed: {exc}"
-        ) from exc
+    sent_webhook = False
+    sent_email = False
 
-    return {"detail": "reminders sent", "count": len(tasks)}
+    webhook_url = (payload or {}).get("webhook_url") or tenant_webhook
+    if channel in {"webhook", "both"} and webhook_url:
+        try:
+            resp = requests.post(webhook_url, json=body, timeout=8)
+            resp.raise_for_status()
+            sent_webhook = True
+        except Exception as exc:  # pragma: no cover
+            raise HTTPException(
+                status_code=502, detail=f"Webhook delivery failed: {exc}"
+            ) from exc
+
+    if channel in {"email", "both"} and recipients:
+        smtp_cfg = resolve_smtp_config(tenant_smtp)
+        subject = f"[ISMS-Bunny] {len(tasks)} tasks due in next {days} days"
+        lines = [
+            f"Tenant: {tenant_name}",
+            f"Due within {days} days:",
+            "",
+        ]
+        for t in tasks:
+            lines.append(
+                "- {title} (status {status}, due {due}, control {control}, risk {risk})".format(
+                    title=t["title"],
+                    status=t["status"],
+                    due=t["due_date"],
+                    control=t.get("control_id") or "-",
+                    risk=t.get("risk_id") or "-",
+                )
+            )
+        body_text = "\n".join(lines)
+        for email in recipients:
+            send_email(smtp_cfg, email, subject, body_text)
+        sent_email = True
+
+    if channel in {"webhook", "both"} and not sent_webhook and webhook_url is None:
+        raise HTTPException(status_code=400, detail="No reminder webhook configured")
+
+    return {
+        "detail": "reminders sent",
+        "count": len(tasks),
+        "webhook": sent_webhook,
+        "email": sent_email,
+    }
 
 
 @router.post("")

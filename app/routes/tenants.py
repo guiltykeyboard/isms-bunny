@@ -4,7 +4,7 @@ from uuid import UUID
 import boto3
 from botocore.client import Config as BotoConfig
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import insert, select, update as sql_update
+from sqlalchemy import insert, select, text, update as sql_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.authz import assert_tenant_access, enforce_current_tenant, require_msp_admin
@@ -14,6 +14,7 @@ from app.db import get_session
 from app.deps import get_current_user_jwt
 from app.models import Tenant, User
 from app.storage import StorageConfig, build_storage_client
+from app.util.time import utcnow
 
 router = APIRouter(prefix="/tenants", tags=["tenants"])
 
@@ -361,6 +362,64 @@ async def update_tenant_reminder_webhook(
         "id": str(t.id),
         "reminder_webhook_url": getattr(t, "reminder_webhook_url", None),
     }
+
+
+@router.get("/{tenant_id}/alerts/{alert_type}")
+async def get_alert_pref(
+    tenant_id: UUID,
+    alert_type: str,
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    await assert_tenant_access(session, user.id, tenant_id, user.is_msp_admin)
+    res = await session.execute(
+        text(
+            """
+            SELECT alert_type, channel, recipients
+            FROM tenant_alert_prefs
+            WHERE tenant_id=:tid AND alert_type=:atype
+            """
+        ),
+        {"tid": tenant_id, "atype": alert_type},
+    )
+    row = res.mappings().first()
+    if not row:
+        return {"alert_type": alert_type, "channel": "webhook", "recipients": []}
+    return dict(row)
+
+
+@router.put("/{tenant_id}/alerts/{alert_type}")
+async def set_alert_pref(
+    tenant_id: UUID,
+    alert_type: str,
+    payload: dict,
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    await assert_tenant_access(session, user.id, tenant_id, user.is_msp_admin)
+    channel = payload.get("channel", "webhook")
+    if channel not in {"webhook", "email", "both", "none"}:
+        raise HTTPException(status_code=400, detail="invalid channel")
+    recipients = payload.get("recipients") or []
+    await session.execute(
+        text(
+            """
+            INSERT INTO tenant_alert_prefs (tenant_id, alert_type, channel, recipients, updated_at)
+            VALUES (:tid, :atype, :channel, :recipients, :now)
+            ON CONFLICT (tenant_id, alert_type)
+            DO UPDATE SET channel=:channel, recipients=:recipients, updated_at=:now
+            """
+        ),
+        {
+            "tid": tenant_id,
+            "atype": alert_type,
+            "channel": channel,
+            "recipients": recipients,
+            "now": utcnow(),
+        },
+    )
+    await session.commit()
+    return {"alert_type": alert_type, "channel": channel, "recipients": recipients}
 
 
 @router.delete("/{tenant_id}", status_code=status.HTTP_204_NO_CONTENT)
