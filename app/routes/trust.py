@@ -193,6 +193,70 @@ async def request_trust_access(
     return {"detail": "request received"}
 
 
+@router.get("/trust/access-requests")
+async def admin_list_trust_requests(
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    limit: int = 50,
+):
+    """
+    Admin view of access requests for the current tenant (MSP admin can see all).
+    """
+    tenant_id = current_tenant()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    require_msp_admin(user.is_msp_admin)
+    rows = await session.execute(
+        text(
+            """
+            SELECT id, name, email, company, justification, status, note, created_at, updated_at
+            FROM trust_access_requests
+            WHERE tenant_id=:tid
+            ORDER BY created_at DESC
+            LIMIT :limit
+            """
+        ),
+        {"tid": tenant_id, "limit": limit},
+    )
+    return [dict(r) for r in rows.mappings().all()]
+
+
+@router.patch("/trust/access-requests/{request_id}")
+async def admin_update_trust_request(
+    request_id: str,
+    payload: dict,
+    user: Annotated[User, Depends(get_current_user_jwt)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    """
+    Approve/deny an access request; note is optional.
+    """
+    tenant_id = current_tenant()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    require_msp_admin(user.is_msp_admin)
+    status_new = payload.get("status")
+    note = payload.get("note")
+    if status_new not in {"approved", "denied", "new", "pending"}:
+        raise HTTPException(status_code=400, detail="status must be approved|denied|new|pending")
+    result = await session.execute(
+        text(
+            """
+            UPDATE trust_access_requests
+            SET status=:status, note=:note, updated_at=now()
+            WHERE id=:id AND tenant_id=:tid
+            RETURNING id, email, status, note
+            """
+        ),
+        {"status": status_new, "note": note, "id": request_id, "tid": tenant_id},
+    )
+    row = result.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="request not found")
+    await session.commit()
+    return {"id": row.id, "status": row.status, "note": row.note}
+
+
 @router.get("/trust/request-status")
 async def trust_request_status(email: str, session: Annotated[AsyncSession, Depends(get_session)]):
     """
