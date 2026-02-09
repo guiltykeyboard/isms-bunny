@@ -18,7 +18,7 @@ export default function MembershipsPage() {
   const [form, setForm] = useState({
     user_id: "",
     tenant_id: "",
-    roles: "tenant_ciso",
+    roles: ["tenant_ciso"] as string[],
   });
   const roleOptions = [
     "msp_admin",
@@ -33,12 +33,21 @@ export default function MembershipsPage() {
     e.preventDefault();
     await apiFetch("/memberships", {
       method: "POST",
-      body: JSON.stringify({
-        ...form,
-        roles: form.roles.split(",").map((r) => r.trim()),
-      }),
+      body: JSON.stringify(form),
     });
     mutate();
+  };
+
+  const toggleRole = (role: string) => {
+    setForm((prev) => {
+      const has = prev.roles.includes(role);
+      return {
+        ...prev,
+        roles: has
+          ? prev.roles.filter((r) => r !== role)
+          : [...prev.roles, role],
+      };
+    });
   };
 
   return (
@@ -72,17 +81,36 @@ export default function MembershipsPage() {
           value={form.tenant_id}
           onChange={(e) => setForm({ ...form, tenant_id: e.target.value })}
         />
-        <select
-          style={inp(colors)}
-          value={form.roles}
-          onChange={(e) => setForm({ ...form, roles: e.target.value })}
+        <div
+          style={{
+            display: "flex",
+            gap: "0.5rem",
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
         >
-          {roleOptions.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
+          {roleOptions.map((r) => {
+            const checked = form.roles.includes(r);
+            return (
+              <label
+                key={r}
+                style={{
+                  color: colors.text,
+                  display: "flex",
+                  gap: "0.25rem",
+                  alignItems: "center",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleRole(r)}
+                />
+                {r}
+              </label>
+            );
+          })}
+        </div>
         <button style={btn(colors)} type="submit">
           Upsert
         </button>
