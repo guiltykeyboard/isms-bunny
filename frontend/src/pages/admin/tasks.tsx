@@ -26,6 +26,7 @@ export default function TasksPage() {
   const { data, mutate } = useSWR<Task[]>("/tasks", apiFetch);
   const { data: controls } = useSWR<any[]>("/controls/soa", apiFetch);
   const { data: risks } = useSWR<any[]>("/risks", apiFetch);
+  const { data: dueSoon } = useSWR<Task[]>("/tasks/due-soon?days=7", apiFetch);
   const [form, setForm] = useState<Partial<Task>>({
     title: "",
     status: "open",
@@ -63,6 +64,25 @@ export default function TasksPage() {
       >
         Download Tasks CSV
       </a>
+      {dueSoon && dueSoon.length > 0 && (
+        <div
+          style={{
+            marginTop: "0.75rem",
+            background: colors.surface,
+            padding: "0.75rem",
+            borderRadius: 10,
+          }}
+        >
+          <strong>Due in next 7 days:</strong>
+          <ul>
+            {dueSoon.map((t) => (
+              <li key={t.id}>
+                {t.title} — due {t.due_date} ({t.status})
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <form
         onSubmit={submit}
         style={{ display: "grid", gap: "0.5rem", maxWidth: 480 }}

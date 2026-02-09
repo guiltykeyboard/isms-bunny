@@ -66,6 +66,32 @@ async def add_task(
     return {"detail": "task added"}
 
 
+@router.get("/due-soon")
+async def due_soon(
+    days: int = 7,
+    session: Annotated[AsyncSession, Depends(get_session)] = Depends(),
+    user: Annotated[object, Depends(get_current_user_jwt)] = Depends(),
+):
+    tid = current_tenant()
+    if not tid:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    res = await session.execute(
+        text(
+            """
+            SELECT id, title, status, due_date, control_id, risk_id, assignee, created_at
+            FROM tasks
+            WHERE tenant_id=:tid
+              AND status <> 'done'
+              AND due_date IS NOT NULL
+              AND due_date <= (CURRENT_DATE + (:days || ' days')::interval)
+            ORDER BY due_date ASC
+            """
+        ),
+        {"tid": tid, "days": days},
+    )
+    return [dict(r) for r in res.mappings().all()]
+
+
 @router.patch("/{task_id}")
 async def update_task(
     task_id: str,
