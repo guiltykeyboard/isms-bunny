@@ -12,17 +12,17 @@ from app.deps import get_current_user_jwt
 router = APIRouter(prefix="/reports", tags=["reports-pdf"])
 
 
-def _simple_pdf(title: str, body_lines: list[str]) -> bytes:
-    # Minimal PDF generation (not fancy; avoids heavy deps)
-    # Using a very small PDF template with plain text
+def _simple_pdf(title: str, subtitle: str, body_lines: list[str]) -> bytes:
+    # Minimal text-only PDF
+    lines = [title, subtitle, ""] + body_lines
+    content = "\\n".join(lines)
     buf = BytesIO()
-    content = "\n".join(body_lines)
     pdf = f"""%PDF-1.4
 1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
 2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj
 3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj
-4 0 obj<</Length {len(content)+100}>>stream
-BT /F1 12 Tf 72 720 Td ({title}) Tj T* ({content}) Tj ET
+4 0 obj<</Length {len(content)+200}>>stream
+BT /F1 14 Tf 72 760 Td ({title}) T* /F1 10 Tf ({subtitle}) T* T* ({content}) Tj ET
 endstream endobj
 5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj
 xref
@@ -63,7 +63,8 @@ async def soa_pdf(
     )
     rows = res.mappings().all()
     body = [f"{r['ref']} - {r['title']} [{r['status']}]" for r in rows]
-    pdf_bytes = _simple_pdf("Statement of Applicability", body)
+    subtitle = f"Tenant: {tid}"
+    pdf_bytes = _simple_pdf("Statement of Applicability", subtitle, body)
     return StreamingResponse(
         BytesIO(pdf_bytes),
         media_type="application/pdf",
@@ -96,7 +97,8 @@ async def risks_pdf(
         f"impact {r['impact'] or '-'} likelihood {r['likelihood'] or '-'} treatment: {r['treatment'] or '-'}"
         for r in rows
     ]
-    pdf_bytes = _simple_pdf("Risk Register", body or ["No risks recorded."])
+    subtitle = f"Tenant: {tid}"
+    pdf_bytes = _simple_pdf("Risk Register", subtitle, body or ["No risks recorded."])
     return StreamingResponse(
         BytesIO(pdf_bytes),
         media_type="application/pdf",
