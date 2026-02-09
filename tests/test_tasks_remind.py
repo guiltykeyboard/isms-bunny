@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from typing import List
 
@@ -44,14 +45,11 @@ async def _clear_user(user_id: uuid.UUID):
         await session.commit()
 
 
-def test_task_remind_webhook(monkeypatch):
+@pytest.mark.asyncio
+async def test_task_remind_webhook(monkeypatch):
     settings = get_settings()
     user_id = uuid.uuid4()
-    pytest.run(asyncio=True)
-
-    import asyncio
-
-    asyncio.get_event_loop().run_until_complete(_seed_user_and_membership(user_id))
+    await _seed_user_and_membership(user_id)
 
     called: List[dict] = []
 
@@ -95,7 +93,7 @@ def test_task_remind_webhook(monkeypatch):
             )
             await session.commit()
 
-    _run(seed())
+    await seed()
 
     client = TestClient(app, headers={"host": settings.default_tenant_fqdn or "localhost"})
     resp = client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
@@ -105,13 +103,14 @@ def test_task_remind_webhook(monkeypatch):
     assert body.get("last_sent_at")
     assert called and called[0]["url"] == "https://webhook.example/test"
 
-    _run(_clear_user(user_id))
+    await _clear_user(user_id)
 
 
-def test_task_remind_email(monkeypatch):
+@pytest.mark.asyncio
+async def test_task_remind_email(monkeypatch):
     settings = get_settings()
     user_id = uuid.uuid4()
-    _run(_seed_user_and_membership(user_id))
+    await _seed_user_and_membership(user_id)
 
     sent = []
 
@@ -145,7 +144,7 @@ def test_task_remind_email(monkeypatch):
             )
             await session.commit()
 
-    _run(seed())
+    await seed()
 
     client = TestClient(app, headers={"host": settings.default_tenant_fqdn or "localhost"})
     resp = client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
@@ -155,4 +154,4 @@ def test_task_remind_email(monkeypatch):
     assert body.get("last_sent_at")
     assert sent and sent[0]["to"] == "ops@example.com"
 
-    _run(_clear_user(user_id))
+    await _clear_user(user_id)
