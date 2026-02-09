@@ -16,6 +16,7 @@
   <img alt="Pip Audit" src="https://github.com/guiltykeyboard/isms-bunny/actions/workflows/pip-audit.yml/badge.svg?branch=main">
   <img alt="NPM Audit" src="https://github.com/guiltykeyboard/isms-bunny/actions/workflows/npm-audit.yml/badge.svg?branch=main">
   <img alt="Nightly" src="https://github.com/guiltykeyboard/isms-bunny/actions/workflows/nightly.yml/badge.svg?branch=main">
+  <img alt="Vercel Preview" src="https://github.com/guiltykeyboard/isms-bunny/actions/workflows/vercel-preview.yml/badge.svg?branch=main">
   <img alt="Lines of code" src="https://raw.githubusercontent.com/guiltykeyboard/isms-bunny/main/assets/loc.svg">
 </p>
 

@@ -1,0 +1,58 @@
+name: ci-issue-vercel
+
+on:
+  workflow_run:
+    workflows: ["vercel-preview"]
+    types: [completed]
+
+jobs:
+  handle-vercel:
+    runs-on: ubuntu-latest
+    if: github.repository == 'guiltykeyboard/isms-bunny'
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Open/close issue on vercel-preview failure
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const run = context.payload.workflow_run;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const label = "ci:vercel";
+            const title = `[CI] vercel-preview ${run.conclusion === 'failure' ? 'failed' : 'fixed'} on ${run.head_branch || run.display_title}`;
+
+            // ensure label
+            try { await github.rest.issues.getLabel({owner, repo, name: label}); }
+            catch {
+              await github.rest.issues.createLabel({owner, repo, name: label, color: "5319e7", description: "Vercel preview CI status"});
+            }
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner, repo, state: "open", labels: label, per_page: 20,
+            });
+
+            if (run.conclusion === "failure") {
+              const body = [
+                `Vercel preview workflow failed.`,
+                `Run: ${run.html_url}`,
+                `Branch: ${run.head_branch}`,
+                `Commit: ${run.head_sha}`,
+                `Event: ${run.event}`
+              ].join("\\n");
+              if (issues.length) {
+                await github.rest.issues.createComment({owner, repo, issue_number: issues[0].number, body});
+              } else {
+                await github.rest.issues.create({owner, repo, title, body, labels: [label]});
+              }
+            } else if (run.conclusion === "success") {
+              for (const issue of issues) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: issue.number,
+                  body: `Vercel preview workflow is now passing. Run: ${run.html_url}`
+                });
+                await github.rest.issues.update({owner, repo, issue_number: issue.number, state: "closed"});
+              }
+            }
