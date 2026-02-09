@@ -45,6 +45,10 @@ export default function AccessRequests() {
     }
   };
 
+  const updateRow = (id: string, updates: Partial<RequestRow>) => {
+    setRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...updates } : row)));
+  };
+
   useEffect(() => {
     load();
   }, []);
@@ -90,6 +94,20 @@ export default function AccessRequests() {
   );
 }
 
-function updateRow(id: string, updates: Partial<RequestRow>) {
-  setRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...updates } : row)));
-}
+const input = (colors: any) => ({
+  padding: "0.6rem",
+  borderRadius: 8,
+  border: `1px solid ${colors.surface}`,
+  background: colors.surface,
+  color: colors.text,
+});
+
+const btn = (colors: any) => ({
+  padding: "0.6rem 1rem",
+  borderRadius: 8,
+  border: "none",
+  background: colors.primary,
+  color: colors.text,
+  cursor: "pointer",
+  fontWeight: 600,
+});

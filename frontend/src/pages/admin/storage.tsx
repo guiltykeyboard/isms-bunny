@@ -4,6 +4,7 @@ import { getInitialMode, palette, resolveMode, ThemeMode } from "../../styles/th
 
 type StorageConfig = {
   use_msp_storage?: boolean;
+  allow_local_login?: boolean;
   bucket?: string;
   region?: string;
   endpoint?: string;

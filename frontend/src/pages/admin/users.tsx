@@ -90,8 +90,8 @@ export default function UsersAdmin() {
                   setRows((prev) =>
                     prev.map((row) =>
                       row.id === r.id ? { ...row, allow_local_fallback: e.target.checked } : row,
-                    ),
-                  ),
+                    )
+                  )
                 }
               />
               Allow local fallback

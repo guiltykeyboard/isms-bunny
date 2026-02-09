@@ -1,5 +1,7 @@
 import type { AppProps } from "next/app";
 import { useEffect, useState } from "react";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "../styles/globals.css";
 import { ThemeMode, getInitialMode, resolveMode } from "../styles/theme";
 
@@ -27,11 +29,15 @@ export default function App({ Component, pageProps }: AppProps) {
   }, [mode, resolved]);
 
   return (
-    <Component
-      {...pageProps}
-      themeMode={mode}
-      setThemeMode={setMode}
-      resolvedTheme={resolved}
-    />
+    <>
+      <Component
+        {...pageProps}
+        themeMode={mode}
+        setThemeMode={setMode}
+        resolvedTheme={resolved}
+      />
+      <Analytics />
+      <SpeedInsights />
+    </>
   );
 }

@@ -9,3 +9,6 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
+.vercel
+node_modules/
+frontend/node_modules/

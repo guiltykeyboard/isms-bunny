@@ -1,13 +1,7 @@
 {
   "extends": "next/core-web-vitals",
   "rules": {
-    "max-len": [
-      "warn",
-      {
-        "code": 100,
-        "ignoreUrls": true
-      }
-    ],
+    "max-len": "off",
     "@next/next/no-html-link-for-pages": "off"
   }
 }

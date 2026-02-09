@@ -169,6 +169,14 @@ function base64urlToBuffer(base64url: string): ArrayBuffer {
   return buffer;
 }
 
+const input = (colors: any) => ({
+  padding: "0.6rem",
+  borderRadius: 8,
+  border: `1px solid ${colors.surface}`,
+  background: colors.surface,
+  color: colors.text,
+});
+
 const btn = (colors: any) => ({
   padding: "0.7rem 1.1rem",
   borderRadius: 10,
