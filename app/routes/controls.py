@@ -1,6 +1,6 @@
 from typing import Annotated, List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -146,6 +146,44 @@ async def list_evidence(
         {"cid": control_id, "tid": tenant_id},
     )
     return [dict(r) for r in rows.mappings().all()]
+
+
+@router.post("/{control_id}/evidence/upload")
+async def upload_evidence(
+    control_id: str,
+    file: UploadFile = File(...),
+    session: Annotated[AsyncSession, Depends(get_session)] = Depends(),
+    user: Annotated[object, Depends(get_current_user_jwt)] = Depends(),
+):
+    """
+    Stub for evidence upload: records metadata; assumes frontend handles actual S3 upload and passes s3_key.
+    """
+    tenant_id = current_tenant()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    if not file:
+        raise HTTPException(status_code=400, detail="file required")
+    # In this stub, we just record metadata; actual upload should be done client-side with a presigned URL.
+    s3_key = f"evidence/{tenant_id}/{control_id}/{file.filename}"
+    await session.execute(
+        text(
+            """
+            INSERT INTO evidence_files (tenant_id, control_id, filename, s3_key, size_bytes, content_type, added_by)
+            VALUES (:tid, :cid, :fn, :s3, :size, :ct, :user)
+            """
+        ),
+        {
+            "tid": tenant_id,
+            "cid": control_id,
+            "fn": file.filename,
+            "s3": s3_key,
+            "size": file.size if hasattr(file, "size") else None,
+            "ct": file.content_type,
+            "user": getattr(user, "id", None),
+        },
+    )
+    await session.commit()
+    return {"detail": "recorded", "s3_key": s3_key}
 
 
 @router.post("/seed/iso27001")
