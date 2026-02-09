@@ -120,6 +120,10 @@ async def login(
     if not auth_utils.verify_password(password, password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    # External-first users must have TOTP enabled as a break-glass control when local auth is used.
+    if user.auth_preference == "external" and not mfa_enabled:
+        raise HTTPException(status_code=403, detail="TOTP is required for this account")
+
     if mfa_enabled:
         if not totp_code or not auth_utils.verify_totp(totp_secret, totp_code):
             raise HTTPException(status_code=401, detail="Invalid or missing TOTP code")

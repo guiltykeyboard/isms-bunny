@@ -193,6 +193,34 @@ async def request_trust_access(
     return {"detail": "request received"}
 
 
+@router.get("/trust/request-status")
+async def trust_request_status(email: str, session: Annotated[AsyncSession, Depends(get_session)]):
+    """
+    Public status lookup by email for the current tenant.
+    """
+    tenant_id = current_tenant()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    email_l = email.strip().lower()
+    if not email_l:
+        raise HTTPException(status_code=400, detail="email required")
+    rows = await session.execute(
+        text(
+            """
+            SELECT status, created_at, note
+            FROM trust_access_requests
+            WHERE tenant_id=:tid AND lower(email)=:email
+            ORDER BY created_at DESC
+            """
+        ),
+        {"tid": tenant_id, "email": email_l},
+    )
+    data = [dict(r) for r in rows.mappings().all()]
+    if not data:
+        raise HTTPException(status_code=404, detail="No requests found for this email")
+    return {"requests": data}
+
+
 @router.get("/trust/requests")
 async def list_trust_requests(
     user: Annotated[User, Depends(get_current_user_jwt)],
