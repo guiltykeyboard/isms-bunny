@@ -438,6 +438,7 @@ def _build_saml_settings(cfg: dict, request: Request) -> dict:
     want_messages_signed = cfg["config"].get("want_messages_signed", False)
     sp_x509 = cfg["config"].get("sp_x509cert")
     sp_key = cfg["config"].get("sp_private_key")
+    metadata_url = cfg["config"].get("idp_metadata_url")
     requested_context = cfg["config"].get("requested_authn_context", [])
     return {
         "strict": True,
@@ -451,12 +452,13 @@ def _build_saml_settings(cfg: dict, request: Request) -> dict:
             **({"x509cert": sp_x509, "privateKey": sp_key} if sp_x509 and sp_key else {}),
         },
         "idp": {
-            "entityId": cfg["config"]["idp_entity_id"],
+            "entityId": cfg["config"].get("idp_entity_id"),
             "singleSignOnService": {
-                "url": cfg["config"]["idp_sso_url"],
+                "url": cfg["config"].get("idp_sso_url"),
                 "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
             },
-            "x509cert": cfg["config"]["idp_x509cert"],
+            "x509cert": cfg["config"].get("idp_x509cert"),
+            **({"metadataUrl": metadata_url} if metadata_url else {}),
         },
         "security": {
             "authnRequestsSigned": want_messages_signed,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+
 import { apiFetch } from "../lib/api";
-import { palette, resolveMode, getInitialMode, ThemeMode } from "../styles/theme";
+import { getInitialMode, palette, resolveMode, ThemeMode } from "../styles/theme";
 
 type Provider = { id: string; name: string; type: string; tenant_id?: string };
 const isSaml = (p: Provider) => p.type === "saml";
@@ -20,6 +21,7 @@ export default function Login() {
   const [enforceExternal, setEnforceExternal] = useState(false);
   const [allowLocalFallback, setAllowLocalFallback] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [pendingCallback, setPendingCallback] = useState<string | null>(null);
 
   useEffect(() => {
     apiFetch("/providers/public")
@@ -129,6 +131,7 @@ export default function Login() {
     try {
       const resp = await apiFetch(`/auth/saml/${encodeURIComponent(name)}/login`);
       if (resp.redirect) {
+        setPendingCallback("saml");
         window.location.href = resp.redirect;
       } else {
         setStatus("SAML provider did not return redirect");
@@ -197,6 +200,11 @@ export default function Login() {
         )}
       </div>
       {status && <p style={{ marginTop: "1rem", color: colors.muted }}>{status}</p>}
+      {pendingCallback && (
+        <p style={{ marginTop: "0.5rem", color: colors.muted }}>
+          Complete the {pendingCallback.toUpperCase()} prompt in the new window if it did not auto-redirect.
+        </p>
+      )}
     </div>
   );
 }
