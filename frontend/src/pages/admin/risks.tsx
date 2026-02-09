@@ -93,6 +93,12 @@ export default function RisksPage() {
     >
       <h1>Risk register</h1>
       {statusMsg && <p style={{ color: colors.muted }}>{statusMsg}</p>}
+      <a
+        href="/reports/risks.csv"
+        style={{ color: colors.primary, fontWeight: 600 }}
+      >
+        Download Risks CSV
+      </a>
 
       <section style={{ marginTop: "1rem" }}>
         <h3>Assets</h3>

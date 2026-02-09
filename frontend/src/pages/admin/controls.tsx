@@ -61,6 +61,12 @@ export default function ControlsAdmin() {
       <p style={{ color: colors.muted }}>
         Mark implementation status per control.
       </p>
+      <a
+        href="/reports/soa.csv"
+        style={{ color: colors.primary, fontWeight: 600 }}
+      >
+        Download SoA CSV
+      </a>
       <div style={{ display: "grid", gap: "0.75rem", marginTop: "1rem" }}>
         {(data || []).map((row) => (
           <div
