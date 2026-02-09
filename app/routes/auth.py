@@ -323,6 +323,15 @@ async def saml_acs(
             session, cfg.get("tenant_id"), "error", "SAML ACS error", {"errors": errors}
         )
         raise HTTPException(status_code=400, detail=f"SAML error: {errors}")
+    if not auth.is_authenticated():
+        await _log_saml(
+            session,
+            cfg.get("tenant_id"),
+            "error",
+            "SAML authentication failed",
+            {"attributes": auth.get_attributes()},
+        )
+        raise HTTPException(status_code=401, detail="SAML authentication failed")
     email = auth.get_nameid() or auth.get_attribute("email") or auth.get_attribute("mail")
     if isinstance(email, list):
         email = email[0]
@@ -427,6 +436,8 @@ def _build_saml_settings(cfg: dict, request: Request) -> dict:
     sp_entity = cfg["config"].get("sp_entity_id") or sp_acs
     want_assertions_signed = cfg["config"].get("want_assertions_signed", True)
     want_messages_signed = cfg["config"].get("want_messages_signed", False)
+    sp_x509 = cfg["config"].get("sp_x509cert")
+    sp_key = cfg["config"].get("sp_private_key")
     requested_context = cfg["config"].get("requested_authn_context", [])
     return {
         "strict": True,
@@ -437,6 +448,7 @@ def _build_saml_settings(cfg: dict, request: Request) -> dict:
                 "url": sp_acs,
                 "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST",
             },
+            **({"x509cert": sp_x509, "privateKey": sp_key} if sp_x509 and sp_key else {}),
         },
         "idp": {
             "entityId": cfg["config"]["idp_entity_id"],
