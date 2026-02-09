@@ -14,6 +14,7 @@ type Task = {
   status: string;
   due_date?: string;
   control_id?: string;
+  risk_id?: string;
   assignee?: string;
 };
 
@@ -71,6 +72,18 @@ export default function TasksPage() {
         />
         <input
           style={input(colors)}
+          placeholder="Risk ID (optional)"
+          value={form.risk_id || ""}
+          onChange={(e) => setForm({ ...form, risk_id: e.target.value })}
+        />
+        <input
+          style={input(colors)}
+          placeholder="Risk ID (optional)"
+          value={form.risk_id || ""}
+          onChange={(e) => setForm({ ...form, risk_id: e.target.value })}
+        />
+        <input
+          style={input(colors)}
           placeholder="Assignee user id"
           value={form.assignee || ""}
           onChange={(e) => setForm({ ...form, assignee: e.target.value })}
@@ -111,6 +124,9 @@ export default function TasksPage() {
             </div>
             {t.control_id && (
               <div style={{ color: colors.muted }}>Control: {t.control_id}</div>
+            )}
+            {t.risk_id && (
+              <div style={{ color: colors.muted }}>Risk: {t.risk_id}</div>
             )}
             {t.assignee && (
               <div style={{ color: colors.muted }}>Assignee: {t.assignee}</div>

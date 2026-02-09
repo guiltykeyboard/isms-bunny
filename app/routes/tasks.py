@@ -22,7 +22,7 @@ async def list_tasks(
     res = await session.execute(
         text(
             """
-            SELECT id, title, status, due_date, control_id, assignee, created_at, updated_at
+            SELECT id, title, status, due_date, control_id, risk_id, assignee, created_at, updated_at
             FROM tasks
             WHERE tenant_id=:tid
             ORDER BY status, due_date NULLS LAST, created_at DESC
@@ -58,6 +58,7 @@ async def add_task(
             "status": payload.get("status", "open"),
             "due": payload.get("due_date"),
             "control": payload.get("control_id"),
+            "risk": payload.get("risk_id"),
             "assignee": payload.get("assignee"),
         },
     )
@@ -75,7 +76,11 @@ async def update_task(
     tid = current_tenant()
     if not tid:
         raise HTTPException(status_code=400, detail="Tenant not resolved")
-    fields = {k: payload.get(k) for k in ["title", "status", "due_date", "control_id", "assignee"] if k in payload}
+    fields = {
+        k: payload.get(k)
+        for k in ["title", "status", "due_date", "control_id", "risk_id", "assignee"]
+        if k in payload
+    }
     if not fields:
         return {"detail": "nothing to update"}
     sets = ", ".join([f"{k} = :{k}" for k in fields.keys()])
