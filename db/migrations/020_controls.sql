@@ -41,15 +41,53 @@ CREATE TABLE IF NOT EXISTS evidence (
     added_at timestamptz NOT NULL DEFAULT now()
 );
 -- Backfill evidence columns if the legacy table from 001_init exists without them
-ALTER TABLE evidence
-    ADD COLUMN IF NOT EXISTS control_id uuid REFERENCES controls(id) ON DELETE CASCADE,
-    ADD COLUMN IF NOT EXISTS name text,
-    ADD COLUMN IF NOT EXISTS url text,
-    ADD COLUMN IF NOT EXISTS s3_key text,
-    ADD COLUMN IF NOT EXISTS added_by uuid REFERENCES users(id),
-    ADD COLUMN IF NOT EXISTS added_at timestamptz NOT NULL DEFAULT now();
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'evidence' AND column_name = 'control_id'
+    ) THEN
+        ALTER TABLE evidence ADD COLUMN control_id uuid REFERENCES controls(id) ON DELETE CASCADE;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'evidence' AND column_name = 'name'
+    ) THEN
+        ALTER TABLE evidence ADD COLUMN name text;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'evidence' AND column_name = 'url'
+    ) THEN
+        ALTER TABLE evidence ADD COLUMN url text;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'evidence' AND column_name = 's3_key'
+    ) THEN
+        ALTER TABLE evidence ADD COLUMN s3_key text;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'evidence' AND column_name = 'added_by'
+    ) THEN
+        ALTER TABLE evidence ADD COLUMN added_by uuid REFERENCES users(id);
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'evidence' AND column_name = 'added_at'
+    ) THEN
+        ALTER TABLE evidence ADD COLUMN added_at timestamptz NOT NULL DEFAULT now();
+    END IF;
 
-CREATE INDEX IF NOT EXISTS evidence_control_tenant_idx ON evidence(tenant_id, control_id, added_at DESC);
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'evidence' AND column_name = 'control_id'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS evidence_control_tenant_idx
+            ON evidence(tenant_id, control_id, added_at DESC);
+    END IF;
+END $$;
 
 -- Tasks linked to controls/risks (risks to be added later)
 CREATE TABLE IF NOT EXISTS tasks (
