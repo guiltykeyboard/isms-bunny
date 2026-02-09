@@ -57,6 +57,12 @@ export default function TasksPage() {
     >
       <h1>Tasks</h1>
       {statusMsg && <p style={{ color: colors.muted }}>{statusMsg}</p>}
+      <a
+        href="/reports/tasks.csv"
+        style={{ color: colors.primary, fontWeight: 600 }}
+      >
+        Download Tasks CSV
+      </a>
       <form
         onSubmit={submit}
         style={{ display: "grid", gap: "0.5rem", maxWidth: 480 }}

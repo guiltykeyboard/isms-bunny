@@ -70,3 +70,27 @@ async def risks_csv(
     rows = [dict(r) for r in res.mappings().all()]
     headers = ["title", "threat", "vulnerability", "impact", "likelihood", "status", "treatment", "asset_id", "owner_user_id"]
     return StreamingResponse(_to_csv(rows, headers), media_type="text/csv")
+
+
+@router.get("/tasks.csv")
+async def tasks_csv(
+    session: AsyncSession = Depends(get_session),
+    user: object = Depends(get_current_user_jwt),
+):
+    tid = current_tenant()
+    if not tid:
+        raise HTTPException(status_code=400, detail="Tenant not resolved")
+    res = await session.execute(
+        text(
+            """
+            SELECT title, status, due_date, control_id, risk_id, assignee, created_at, updated_at
+            FROM tasks
+            WHERE tenant_id=:tid
+            ORDER BY status, due_date NULLS LAST, created_at DESC
+            """
+        ),
+        {"tid": tid},
+    )
+    rows = [dict(r) for r in res.mappings().all()]
+    headers = ["title", "status", "due_date", "control_id", "risk_id", "assignee", "created_at", "updated_at"]
+    return StreamingResponse(_to_csv(rows, headers), media_type="text/csv")
