@@ -23,7 +23,11 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Give admin membership to dev tenant (roles array includes msp_admin for clarity)
 INSERT INTO memberships (user_id, tenant_id, roles)
-VALUES ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', ARRAY['msp_admin'])
+VALUES (
+    '00000000-0000-0000-0000-000000000002',
+    '00000000-0000-0000-0000-000000000001',
+    ARRAY['msp_admin']::member_role[]
+)
 ON CONFLICT (user_id, tenant_id) DO NOTHING;
 
 -- Local credential for dev admin (password: ChangeMe!123)
