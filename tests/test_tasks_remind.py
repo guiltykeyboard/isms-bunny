@@ -3,6 +3,7 @@ import uuid
 from typing import List
 
 import requests
+from sqlalchemy import text
 from fastapi.testclient import TestClient
 
 from app.config import get_settings
@@ -14,19 +15,23 @@ async def _seed_user_and_membership(user_id: uuid.UUID):
     settings = get_settings()
     async with SessionLocal() as session:
         await session.execute(
-            """
-            INSERT INTO users (id, email, full_name, status, is_msp_admin)
-            VALUES (:id, :email, 'Tester', 'active', true)
-            ON CONFLICT (id) DO UPDATE SET is_msp_admin = EXCLUDED.is_msp_admin
-            """,
+            text(
+                """
+                INSERT INTO users (id, email, full_name, status, is_msp_admin)
+                VALUES (:id, :email, 'Tester', 'active', true)
+                ON CONFLICT (id) DO UPDATE SET is_msp_admin = EXCLUDED.is_msp_admin
+                """
+            ),
             {"id": user_id, "email": f"{user_id}@example.com"},
         )
         await session.execute(
-            """
-            INSERT INTO memberships (user_id, tenant_id, roles)
-            VALUES (:uid, :tid, ARRAY['admin'])
-            ON CONFLICT DO NOTHING
-            """,
+            text(
+                """
+                INSERT INTO memberships (user_id, tenant_id, roles)
+                VALUES (:uid, :tid, ARRAY['admin'])
+                ON CONFLICT DO NOTHING
+                """
+            ),
             {"uid": user_id, "tid": settings.default_tenant_id},
         )
         await session.commit()
@@ -34,8 +39,8 @@ async def _seed_user_and_membership(user_id: uuid.UUID):
 
 async def _clear_user(user_id: uuid.UUID):
     async with SessionLocal() as session:
-        await session.execute("DELETE FROM memberships WHERE user_id=:uid", {"uid": user_id})
-        await session.execute("DELETE FROM users WHERE id=:uid", {"uid": user_id})
+        await session.execute(text("DELETE FROM memberships WHERE user_id=:uid"), {"uid": user_id})
+        await session.execute(text("DELETE FROM users WHERE id=:uid"), {"uid": user_id})
         await session.commit()
 
 
@@ -64,24 +69,28 @@ def test_task_remind_webhook(monkeypatch):
     async def seed():
         async with SessionLocal() as session:
             await session.execute(
-                "UPDATE tenants SET reminder_webhook_url=:u WHERE id=:tid",
+                text("UPDATE tenants SET reminder_webhook_url=:u WHERE id=:tid"),
                 {"u": "https://webhook.example/test", "tid": settings.default_tenant_id},
             )
             await session.execute(
-                """
-                INSERT INTO tenant_alert_prefs (tenant_id, alert_type, channel, recipients)
-                VALUES (:tid, 'task_due', 'webhook', '{}')
-                ON CONFLICT (tenant_id, alert_type)
-                DO UPDATE SET channel='webhook', recipients='{}'
-                """,
+                text(
+                    """
+                    INSERT INTO tenant_alert_prefs (tenant_id, alert_type, channel, recipients)
+                    VALUES (:tid, 'task_due', 'webhook', '{}')
+                    ON CONFLICT (tenant_id, alert_type)
+                    DO UPDATE SET channel='webhook', recipients='{}'
+                    """
+                ),
                 {"tid": settings.default_tenant_id},
             )
             await session.execute(
-                """
-                INSERT INTO tasks (id, tenant_id, title, status, due_date)
-                VALUES (:id, :tid, 'Test task', 'open', CURRENT_DATE)
-                ON CONFLICT DO NOTHING
-                """,
+                text(
+                    """
+                    INSERT INTO tasks (id, tenant_id, title, status, due_date)
+                    VALUES (:id, :tid, 'Test task', 'open', CURRENT_DATE)
+                    ON CONFLICT DO NOTHING
+                    """
+                ),
                 {"id": uuid.uuid4(), "tid": settings.default_tenant_id},
             )
             await session.commit()
@@ -114,20 +123,24 @@ def test_task_remind_email(monkeypatch):
     async def seed():
         async with SessionLocal() as session:
             await session.execute(
-                """
-                INSERT INTO tenant_alert_prefs (tenant_id, alert_type, channel, recipients)
-                VALUES (:tid, 'task_due', 'email', ARRAY['ops@example.com'])
-                ON CONFLICT (tenant_id, alert_type)
-                DO UPDATE SET channel='email', recipients=ARRAY['ops@example.com']
-                """,
+                text(
+                    """
+                    INSERT INTO tenant_alert_prefs (tenant_id, alert_type, channel, recipients)
+                    VALUES (:tid, 'task_due', 'email', ARRAY['ops@example.com'])
+                    ON CONFLICT (tenant_id, alert_type)
+                    DO UPDATE SET channel='email', recipients=ARRAY['ops@example.com']
+                    """
+                ),
                 {"tid": settings.default_tenant_id},
             )
             await session.execute(
-                """
-                INSERT INTO tasks (id, tenant_id, title, status, due_date)
-                VALUES (:id, :tid, 'Email task', 'open', CURRENT_DATE)
-                ON CONFLICT DO NOTHING
-                """,
+                text(
+                    """
+                    INSERT INTO tasks (id, tenant_id, title, status, due_date)
+                    VALUES (:id, :tid, 'Email task', 'open', CURRENT_DATE)
+                    ON CONFLICT DO NOTHING
+                    """
+                ),
                 {"id": uuid.uuid4(), "tid": settings.default_tenant_id},
             )
             await session.commit()
