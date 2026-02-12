@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 
 import pytest
@@ -49,7 +50,8 @@ async def temp_user():
 
 @pytest.fixture(scope="session")
 def event_loop():
-    loop = pytest.asyncio.new_event_loop()
+    # Use a dedicated asyncio event loop for the entire test session.
+    loop = asyncio.new_event_loop()
     yield loop
     loop.run_until_complete(engine.dispose())
     loop.close()
