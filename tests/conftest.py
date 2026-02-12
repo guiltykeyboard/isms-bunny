@@ -1,5 +1,4 @@
 import asyncio
-import asyncio
 import uuid
 
 import pytest
@@ -25,7 +24,9 @@ async def async_client():
     settings = get_settings()
     transport = ASGITransport(app=app, lifespan="on")
     headers = {"host": settings.default_tenant_fqdn or "localhost"}
-    async with AsyncClient(transport=transport, base_url="http://testserver", headers=headers) as client:
+    async with AsyncClient(
+        transport=transport, base_url="http://testserver", headers=headers
+    ) as client:
         yield client
 
 
