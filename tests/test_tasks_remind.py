@@ -1,16 +1,18 @@
 import uuid
 from typing import List
+
 import requests
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
 
 from app.config import get_settings
-from app.db import SessionLocal
+
+settings = get_settings()
+SYNC_ENGINE = create_engine(settings.database_url.replace("+asyncpg", ""), future=True)
 
 
-async def _seed_user_and_membership(user_id: uuid.UUID):
-    settings = get_settings()
-    async with SessionLocal() as session:
-        await session.execute(
+def _seed_user_and_membership(user_id: uuid.UUID):
+    with SYNC_ENGINE.begin() as conn:
+        conn.execute(
             text(
                 """
                 INSERT INTO users (id, email, full_name, status, is_msp_admin)
@@ -20,7 +22,7 @@ async def _seed_user_and_membership(user_id: uuid.UUID):
             ),
             {"id": user_id, "email": f"{user_id}@example.com"},
         )
-        await session.execute(
+        conn.execute(
             text(
                 """
                 INSERT INTO memberships (user_id, tenant_id, roles)
@@ -30,20 +32,17 @@ async def _seed_user_and_membership(user_id: uuid.UUID):
             ),
             {"uid": user_id, "tid": settings.default_tenant_id},
         )
-        await session.commit()
 
 
-async def _clear_user(user_id: uuid.UUID):
-    async with SessionLocal() as session:
-        await session.execute(text("DELETE FROM memberships WHERE user_id=:uid"), {"uid": user_id})
-        await session.execute(text("DELETE FROM users WHERE id=:uid"), {"uid": user_id})
-        await session.commit()
+def _clear_user(user_id: uuid.UUID):
+    with SYNC_ENGINE.begin() as conn:
+        conn.execute(text("DELETE FROM memberships WHERE user_id=:uid"), {"uid": user_id})
+        conn.execute(text("DELETE FROM users WHERE id=:uid"), {"uid": user_id})
 
 
-def test_task_remind_webhook(client, monkeypatch, event_loop):
-    settings = get_settings()
+def test_task_remind_webhook(client, monkeypatch):
     user_id = uuid.uuid4()
-    event_loop.run_until_complete(_seed_user_and_membership(user_id))
+    _seed_user_and_membership(user_id)
 
     called: List[dict] = []
 
@@ -58,36 +57,32 @@ def test_task_remind_webhook(client, monkeypatch, event_loop):
 
     monkeypatch.setattr(requests, "post", fake_post)
 
-    async def seed():
-        async with SessionLocal() as session:
-            await session.execute(
-                text("UPDATE tenants SET reminder_webhook_url=:u WHERE id=:tid"),
-                {"u": "https://webhook.example/test", "tid": settings.default_tenant_id},
-            )
-            await session.execute(
-                text(
-                    """
-                    INSERT INTO tenant_alert_prefs (tenant_id, alert_type, channel, recipients)
-                    VALUES (:tid, 'task_due', 'webhook', '{}')
-                    ON CONFLICT (tenant_id, alert_type)
-                    DO UPDATE SET channel='webhook', recipients='{}'
-                    """
-                ),
-                {"tid": settings.default_tenant_id},
-            )
-            await session.execute(
-                text(
-                    """
-                    INSERT INTO tasks (id, tenant_id, title, status, due_date)
-                    VALUES (:id, :tid, 'Test task', 'open', CURRENT_DATE)
-                    ON CONFLICT DO NOTHING
-                    """
-                ),
-                {"id": uuid.uuid4(), "tid": settings.default_tenant_id},
-            )
-            await session.commit()
-
-    event_loop.run_until_complete(seed())
+    with SYNC_ENGINE.begin() as conn:
+        conn.execute(
+            text("UPDATE tenants SET reminder_webhook_url=:u WHERE id=:tid"),
+            {"u": "https://webhook.example/test", "tid": settings.default_tenant_id},
+        )
+        conn.execute(
+            text(
+                """
+                INSERT INTO tenant_alert_prefs (tenant_id, alert_type, channel, recipients)
+                VALUES (:tid, 'task_due', 'webhook', '{}')
+                ON CONFLICT (tenant_id, alert_type)
+                DO UPDATE SET channel='webhook', recipients='{}'
+                """
+            ),
+            {"tid": settings.default_tenant_id},
+        )
+        conn.execute(
+            text(
+                """
+                INSERT INTO tasks (id, tenant_id, title, status, due_date)
+                VALUES (:id, :tid, 'Test task', 'open', CURRENT_DATE)
+                ON CONFLICT DO NOTHING
+                """
+            ),
+            {"id": uuid.uuid4(), "tid": settings.default_tenant_id},
+        )
 
     resp = client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
     assert resp.status_code == 200, resp.text
@@ -96,13 +91,12 @@ def test_task_remind_webhook(client, monkeypatch, event_loop):
     assert body.get("last_sent_at")
     assert called and called[0]["url"] == "https://webhook.example/test"
 
-    event_loop.run_until_complete(_clear_user(user_id))
+    _clear_user(user_id)
 
 
-def test_task_remind_email(client, monkeypatch, event_loop):
-    settings = get_settings()
+def test_task_remind_email(client, monkeypatch):
     user_id = uuid.uuid4()
-    event_loop.run_until_complete(_seed_user_and_membership(user_id))
+    _seed_user_and_membership(user_id)
 
     sent = []
 
@@ -111,32 +105,28 @@ def test_task_remind_email(client, monkeypatch, event_loop):
 
     monkeypatch.setattr("app.alerts.send_email", fake_send_email)
 
-    async def seed():
-        async with SessionLocal() as session:
-            await session.execute(
-                text(
-                    """
-                    INSERT INTO tenant_alert_prefs (tenant_id, alert_type, channel, recipients)
-                    VALUES (:tid, 'task_due', 'email', ARRAY['ops@example.com'])
-                    ON CONFLICT (tenant_id, alert_type)
-                    DO UPDATE SET channel='email', recipients=ARRAY['ops@example.com']
-                    """
-                ),
-                {"tid": settings.default_tenant_id},
-            )
-            await session.execute(
-                text(
-                    """
-                    INSERT INTO tasks (id, tenant_id, title, status, due_date)
-                    VALUES (:id, :tid, 'Email task', 'open', CURRENT_DATE)
-                    ON CONFLICT DO NOTHING
-                    """
-                ),
-                {"id": uuid.uuid4(), "tid": settings.default_tenant_id},
-            )
-            await session.commit()
-
-    event_loop.run_until_complete(seed())
+    with SYNC_ENGINE.begin() as conn:
+        conn.execute(
+            text(
+                """
+                INSERT INTO tenant_alert_prefs (tenant_id, alert_type, channel, recipients)
+                VALUES (:tid, 'task_due', 'email', ARRAY['ops@example.com'])
+                ON CONFLICT (tenant_id, alert_type)
+                DO UPDATE SET channel='email', recipients=ARRAY['ops@example.com']
+                """
+            ),
+            {"tid": settings.default_tenant_id},
+        )
+        conn.execute(
+            text(
+                """
+                INSERT INTO tasks (id, tenant_id, title, status, due_date)
+                VALUES (:id, :tid, 'Email task', 'open', CURRENT_DATE)
+                ON CONFLICT DO NOTHING
+                """
+            ),
+            {"id": uuid.uuid4(), "tid": settings.default_tenant_id},
+        )
 
     resp = client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
     assert resp.status_code == 200, resp.text
@@ -145,4 +135,4 @@ def test_task_remind_email(client, monkeypatch, event_loop):
     assert body.get("last_sent_at")
     assert sent and sent[0]["to"] == "ops@example.com"
 
-    event_loop.run_until_complete(_clear_user(user_id))
+    _clear_user(user_id)
