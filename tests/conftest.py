@@ -2,8 +2,8 @@ import asyncio
 import uuid
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 
 from app.config import get_settings
 from app.db import SessionLocal, engine
