@@ -1,6 +1,7 @@
 import uuid
 
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 
@@ -17,7 +18,7 @@ def client(event_loop):
     return TestClient(app, headers=headers, raise_server_exceptions=False)
 
 
-@pytest.fixture()
+@pytest_asyncio.fixture()
 async def async_client():
     """Async client using the same event loop to avoid cross-loop issues."""
     settings = get_settings()
