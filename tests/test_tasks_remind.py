@@ -43,7 +43,7 @@ async def _clear_user(user_id: uuid.UUID):
         await session.commit()
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_task_remind_webhook(async_client: AsyncClient, monkeypatch):
     settings = get_settings()
     user_id = uuid.uuid4()
@@ -103,7 +103,7 @@ async def test_task_remind_webhook(async_client: AsyncClient, monkeypatch):
     await _clear_user(user_id)
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_task_remind_email(async_client: AsyncClient, monkeypatch):
     settings = get_settings()
     user_id = uuid.uuid4()
