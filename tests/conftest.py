@@ -22,7 +22,7 @@ def client(event_loop):
 async def async_client():
     """Async client using the same event loop to avoid cross-loop issues."""
     settings = get_settings()
-    transport = ASGITransport(app=app, lifespan="on")
+    transport = ASGITransport(app=app)
     headers = {"host": settings.default_tenant_fqdn or "localhost"}
     async with AsyncClient(
         transport=transport, base_url="http://testserver", headers=headers
