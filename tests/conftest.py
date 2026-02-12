@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 
 import pytest
@@ -6,7 +5,7 @@ from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 
 from app.config import get_settings
-from app.db import SessionLocal, engine
+from app.db import SessionLocal
 from app.main import app
 
 
@@ -59,12 +58,3 @@ async def temp_user():
             await session.execute("DELETE FROM memberships WHERE user_id=:uid", {"uid": user_id})
             await session.execute("DELETE FROM users WHERE id=:uid", {"uid": user_id})
             await session.commit()
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    # Use a dedicated asyncio event loop for the entire test session.
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.run_until_complete(engine.dispose())
-    loop.close()
