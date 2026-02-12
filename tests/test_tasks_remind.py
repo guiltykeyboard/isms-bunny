@@ -1,8 +1,5 @@
-import asyncio
 import uuid
 from typing import List
-
-import pytest
 import requests
 from sqlalchemy import text
 
@@ -43,10 +40,10 @@ async def _clear_user(user_id: uuid.UUID):
         await session.commit()
 
 
-def test_task_remind_webhook(client, monkeypatch):
+def test_task_remind_webhook(client, monkeypatch, event_loop):
     settings = get_settings()
     user_id = uuid.uuid4()
-    asyncio.run(_seed_user_and_membership(user_id))
+    event_loop.run_until_complete(_seed_user_and_membership(user_id))
 
     called: List[dict] = []
 
@@ -90,7 +87,7 @@ def test_task_remind_webhook(client, monkeypatch):
             )
             await session.commit()
 
-    asyncio.run(seed())
+    event_loop.run_until_complete(seed())
 
     resp = client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
     assert resp.status_code == 200, resp.text
@@ -99,13 +96,13 @@ def test_task_remind_webhook(client, monkeypatch):
     assert body.get("last_sent_at")
     assert called and called[0]["url"] == "https://webhook.example/test"
 
-    asyncio.run(_clear_user(user_id))
+    event_loop.run_until_complete(_clear_user(user_id))
 
 
-def test_task_remind_email(client, monkeypatch):
+def test_task_remind_email(client, monkeypatch, event_loop):
     settings = get_settings()
     user_id = uuid.uuid4()
-    asyncio.run(_seed_user_and_membership(user_id))
+    event_loop.run_until_complete(_seed_user_and_membership(user_id))
 
     sent = []
 
@@ -139,7 +136,7 @@ def test_task_remind_email(client, monkeypatch):
             )
             await session.commit()
 
-    asyncio.run(seed())
+    event_loop.run_until_complete(seed())
 
     resp = client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
     assert resp.status_code == 200, resp.text
@@ -148,4 +145,4 @@ def test_task_remind_email(client, monkeypatch):
     assert body.get("last_sent_at")
     assert sent and sent[0]["to"] == "ops@example.com"
 
-    asyncio.run(_clear_user(user_id))
+    event_loop.run_until_complete(_clear_user(user_id))
