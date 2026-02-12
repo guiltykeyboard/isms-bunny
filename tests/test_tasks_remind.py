@@ -3,12 +3,11 @@ from typing import List
 
 import pytest
 import requests
-from fastapi.testclient import TestClient
+from httpx import AsyncClient
 from sqlalchemy import text
 
 from app.config import get_settings
 from app.db import SessionLocal
-from app.main import app
 
 
 async def _seed_user_and_membership(user_id: uuid.UUID):
@@ -44,8 +43,8 @@ async def _clear_user(user_id: uuid.UUID):
         await session.commit()
 
 
-@pytest.mark.asyncio
-async def test_task_remind_webhook(monkeypatch):
+@pytest.mark.anyio
+async def test_task_remind_webhook(async_client: AsyncClient, monkeypatch):
     settings = get_settings()
     user_id = uuid.uuid4()
     await _seed_user_and_membership(user_id)
@@ -94,8 +93,7 @@ async def test_task_remind_webhook(monkeypatch):
 
     await seed()
 
-    client = TestClient(app, headers={"host": settings.default_tenant_fqdn or "localhost"})
-    resp = client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
+    resp = await async_client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["webhook"] is True
@@ -105,8 +103,8 @@ async def test_task_remind_webhook(monkeypatch):
     await _clear_user(user_id)
 
 
-@pytest.mark.asyncio
-async def test_task_remind_email(monkeypatch):
+@pytest.mark.anyio
+async def test_task_remind_email(async_client: AsyncClient, monkeypatch):
     settings = get_settings()
     user_id = uuid.uuid4()
     await _seed_user_and_membership(user_id)
@@ -116,7 +114,7 @@ async def test_task_remind_email(monkeypatch):
     def fake_send_email(cfg, to, subject, body, sender=None):
         sent.append({"to": to, "subject": subject, "body": body})
 
-    monkeypatch.setattr("app.routes.tasks.send_email", fake_send_email)
+    monkeypatch.setattr("app.alerts.send_email", fake_send_email)
 
     async def seed():
         async with SessionLocal() as session:
@@ -145,8 +143,7 @@ async def test_task_remind_email(monkeypatch):
 
     await seed()
 
-    client = TestClient(app, headers={"host": settings.default_tenant_fqdn or "localhost"})
-    resp = client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
+    resp = await async_client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["email"] is True

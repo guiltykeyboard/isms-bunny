@@ -1,7 +1,9 @@
 import asyncio
+import asyncio
 import uuid
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 from fastapi.testclient import TestClient
 
 from app.config import get_settings
@@ -15,6 +17,16 @@ def client(event_loop):
     settings = get_settings()
     headers = {"host": settings.default_tenant_fqdn or "localhost"}
     return TestClient(app, headers=headers, raise_server_exceptions=False)
+
+
+@pytest.fixture()
+async def async_client():
+    """Async client using the same event loop to avoid cross-loop issues."""
+    settings = get_settings()
+    transport = ASGITransport(app=app, lifespan="on")
+    headers = {"host": settings.default_tenant_fqdn or "localhost"}
+    async with AsyncClient(transport=transport, base_url="http://testserver", headers=headers) as client:
+        yield client
 
 
 @pytest.fixture()
