@@ -1,9 +1,9 @@
+import asyncio
 import uuid
 from typing import List
 
 import pytest
 import requests
-from httpx import AsyncClient
 from sqlalchemy import text
 
 from app.config import get_settings
@@ -43,11 +43,10 @@ async def _clear_user(user_id: uuid.UUID):
         await session.commit()
 
 
-@pytest.mark.asyncio
-async def test_task_remind_webhook(async_client: AsyncClient, monkeypatch):
+def test_task_remind_webhook(client, monkeypatch):
     settings = get_settings()
     user_id = uuid.uuid4()
-    await _seed_user_and_membership(user_id)
+    asyncio.run(_seed_user_and_membership(user_id))
 
     called: List[dict] = []
 
@@ -91,23 +90,22 @@ async def test_task_remind_webhook(async_client: AsyncClient, monkeypatch):
             )
             await session.commit()
 
-    await seed()
+    asyncio.run(seed())
 
-    resp = await async_client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
+    resp = client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["webhook"] is True
     assert body.get("last_sent_at")
     assert called and called[0]["url"] == "https://webhook.example/test"
 
-    await _clear_user(user_id)
+    asyncio.run(_clear_user(user_id))
 
 
-@pytest.mark.asyncio
-async def test_task_remind_email(async_client: AsyncClient, monkeypatch):
+def test_task_remind_email(client, monkeypatch):
     settings = get_settings()
     user_id = uuid.uuid4()
-    await _seed_user_and_membership(user_id)
+    asyncio.run(_seed_user_and_membership(user_id))
 
     sent = []
 
@@ -141,13 +139,13 @@ async def test_task_remind_email(async_client: AsyncClient, monkeypatch):
             )
             await session.commit()
 
-    await seed()
+    asyncio.run(seed())
 
-    resp = await async_client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
+    resp = client.post("/tasks/remind", headers={"X-User-Id": str(user_id)})
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["email"] is True
     assert body.get("last_sent_at")
     assert sent and sent[0]["to"] == "ops@example.com"
 
-    await _clear_user(user_id)
+    asyncio.run(_clear_user(user_id))
