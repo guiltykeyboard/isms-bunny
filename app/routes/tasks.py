@@ -80,7 +80,7 @@ async def send_reminders(
             WHERE tenant_id=:tid
               AND status <> 'done'
               AND due_date IS NOT NULL
-              AND due_date <= (CURRENT_DATE + (:days || ' days')::interval)
+              AND due_date <= (CURRENT_DATE + make_interval(days => :days))
             ORDER BY due_date ASC
             """
         ),
@@ -178,7 +178,7 @@ async def due_soon(
             WHERE tenant_id=:tid
               AND status <> 'done'
               AND due_date IS NOT NULL
-              AND due_date <= (CURRENT_DATE + (:days || ' days')::interval)
+              AND due_date <= (CURRENT_DATE + make_interval(days => :days))
             ORDER BY due_date ASC
             """
         ),
